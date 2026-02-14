@@ -80,16 +80,10 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
         .from($ingested_items)
         .innerJoin($data_sources, eq($ingested_items.data_source_id, $data_sources.id))
         .where(
-          and(
-            // only process articles that haven't been processed yet
-            isNull($ingested_items.processed_at),
-            // only process articles that have a publish date in the last 48 hours
-            gte($ingested_items.published_at, new Date(new Date().getTime() - 48 * 60 * 60 * 1000)),
-            // only articles that have not failed
-            isNull($ingested_items.fail_reason),
-            // MAIN FILTER: only articles that need to be processed
-            inArray($ingested_items.id, _event.payload.ingested_item_ids)
-          )
+          // MAIN FILTER: Only process the specific articles requested
+          // We trust the caller (whether auto-ingest or manual reprocess) to provide valid IDs
+          // Removing status/date checks allows reprocessing old or failed articles
+          inArray($ingested_items.id, _event.payload.ingested_item_ids)
         )
     );
 

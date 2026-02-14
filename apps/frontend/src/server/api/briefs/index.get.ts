@@ -3,13 +3,13 @@ import { ensureDate, formatReportDate, generateReportSlug, getDB } from '~/serve
 
 export default defineEventHandler(async event => {
   const reports = await getDB(event).query.$reports.findMany({
-    orderBy: desc($reports.createdAt),
-    columns: { id: true, createdAt: true, title: true },
+    orderBy: desc($reports.created_at),
+    columns: { id: true, created_at: true, title: true },
   });
 
   // Process reports to add date and slug
   return reports.map(report => {
-    const createdAt = ensureDate(report.createdAt);
+    const createdAt = ensureDate(report.created_at);
     return {
       ...report,
       date: formatReportDate(createdAt),

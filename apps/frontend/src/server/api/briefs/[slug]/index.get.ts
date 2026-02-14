@@ -37,10 +37,10 @@ export default defineEventHandler(async event => {
 
   // get report created on this day
   const report = await getDB(event).query.$reports.findFirst({
-    where: and(gte($reports.createdAt, startOfDay), lte($reports.createdAt, endOfDay)),
+    where: and(gte($reports.created_at, startOfDay), lte($reports.created_at, endOfDay)),
     columns: {
       id: true,
-      createdAt: true,
+      created_at: true,
       title: true,
       content: true,
       model_author: true,
@@ -57,6 +57,6 @@ export default defineEventHandler(async event => {
   return {
     ...report,
     slug,
-    date: formatReportDate(ensureDate(report.createdAt)),
+    date: formatReportDate(ensureDate(report.created_at)),
   } satisfies Brief;
 });

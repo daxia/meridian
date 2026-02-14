@@ -6,7 +6,7 @@ export default defineEventHandler(async event => {
   // Process reports to add date and slug
   const processedReports = reports
     .map(report => {
-      const createdAt = ensureDate(report.createdAt);
+      const createdAt = ensureDate(report.created_at);
       return {
         ...report,
         date: formatReportDate(createdAt),
@@ -14,8 +14,8 @@ export default defineEventHandler(async event => {
       };
     })
     .sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
       return dateB - dateA;
     });
 
