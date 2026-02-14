@@ -233,7 +233,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
           async () => {
             const model = createLLMModel(env, llmConfig);
             const response = await generateText({
-              model: model,
+              model: model as any,
               temperature: 0,
               prompt: getArticleRepresentationPrompt(article.title, article.url, article.contentBodyText),
             });

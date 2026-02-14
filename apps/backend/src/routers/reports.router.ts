@@ -16,7 +16,7 @@ const route = new Hono<HonoEnv>()
 
     const reportResult = await tryCatchAsync(
       getDb(c.env.HYPERDRIVE).query.$reports.findFirst({
-        orderBy: desc($reports.createdAt),
+        orderBy: desc($reports.created_at),
       })
     );
     if (reportResult.isErr()) {

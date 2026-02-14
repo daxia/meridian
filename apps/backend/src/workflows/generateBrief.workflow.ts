@@ -132,7 +132,7 @@ export class GenerateBriefWorkflow extends WorkflowEntrypoint<Env, GenerateBrief
 
         const model = createLLMModel(env, llmConfig);
         const response = await generateText({
-          model: model,
+          model: model as any,
           temperature: 0.2,
           prompt: prompt,
         });
