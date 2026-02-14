@@ -1,4 +1,4 @@
-fix: 修复 TS 编译错误
+docs: 更新运维手册，补充 ML Service 新增依赖
 
-- 移除 `generateBrief.workflow.ts` 中不存在的 `IngestedItem` 类型导入。
-- 修复 `index.ts` 中 `ScheduledEvent.cron` 属性访问的类型问题 (使用类型断言)。
+- 在系统概览中添加 UMAP 和 HDBSCAN。
+- 在部署指南中补充关于 C++ 编译环境的说明 (针对 hdbscan)。
