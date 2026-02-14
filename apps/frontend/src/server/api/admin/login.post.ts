@@ -12,14 +12,14 @@ export default eventHandler(async event => {
 
   const { username, password } = bodyResult.data;
   if (username !== config.admin.username || password !== config.admin.password) {
-    throw createError({ statusCode: 401, message: 'Wrong password' });
+    throw createError({ statusCode: 401, message: '密码错误' });
   }
 
   try {
     await setUserSession(event, { user: { login: 'admin' }, loggedInAt: Date.now() });
   } catch (error) {
-    console.error('Failed to set user session', error);
-    throw createError({ statusCode: 500, message: 'Failed to set user session' });
+    console.error('设置用户会话失败', error);
+    throw createError({ statusCode: 500, message: '设置用户会话失败' });
   }
 
   return setResponseStatus(event, 201);

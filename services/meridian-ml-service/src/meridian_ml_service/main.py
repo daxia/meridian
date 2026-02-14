@@ -40,7 +40,7 @@ async def api_compute_embeddings(
     """
     Computes embeddings for the provided list of texts.
     """
-    logger.info(f"Received request to embed {len(request.texts)} texts.")
+    logger.info(f"收到嵌入请求，处理 {len(request.texts)} 条文本。")
     try:
         embeddings_np: np.ndarray = compute_embeddings(
             texts=request.texts,
@@ -53,7 +53,7 @@ async def api_compute_embeddings(
             embeddings=embeddings_list, model_name=settings.embedding_model_name
         )
     except Exception as e:
-        logger.error(f"ERROR during embedding computation: {e}", exc_info=True)
+        logger.error(f"嵌入计算错误: {e}", exc_info=True)
         # Consider more specific error handling based on exception types
         raise HTTPException(
             status_code=500,

@@ -28,8 +28,8 @@ export default defineEventHandler(async event => {
       throw new Error(`Failed to delete source: ${response.statusText}`);
     }
   } catch (error) {
-    console.error('Failed to delete source:', error);
-    throw createError({ statusCode: 500, statusMessage: 'Failed to delete source' });
+    console.error('删除源失败:', error);
+    throw createError({ statusCode: 500, statusMessage: '删除源失败' });
   }
 
   return { success: true };

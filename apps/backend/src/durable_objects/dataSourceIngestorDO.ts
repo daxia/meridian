@@ -84,14 +84,14 @@ async function attemptWithRetries<T, E extends Error>(
 
     // If not the last attempt, wait before retrying
     if (attempt < maxRetries) {
-      const delay = initialDelayMs * 2 ** (attempt - 1);
-      logger.debug('Waiting before next attempt.', { delay_ms: delay });
+      const delay = baseDelay * 2 ** (attempt - 1);
+      logger.debug('等待重试', { delay_ms: delay });
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
 
   // If loop finishes, all retries failed
-  logger.error('Failed after max attempts.', { max_retries: maxRetries }, lastError);
+  logger.error('超过最大重试次数失败', { max_retries: maxRetries }, lastError);
   // biome-ignore lint/style/noNonNullAssertion: <explanation>
   return err(lastError!);
 }
@@ -235,7 +235,7 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
       // 1. Retrieve the DataSourceState from storage
       const state = await this.ctx.storage.get<DataSourceState>('state');
       if (state === undefined) {
-        this.logger.error('State not found in alarm. Cannot proceed.');
+        this.logger.error('Alarm中未找到状态，无法继续。');
         // Maybe schedule alarm far in the future or log an error to an external system
         // We cannot proceed without state.
         return;
@@ -245,7 +245,7 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
       const validatedState = DataSourceStateSchema.safeParse(state);
       if (validatedState.success === false) {
         const logger = this.logger.child({ operation: 'alarm', validation_error: validatedState.error.format() });
-        logger.error('State validation failed. Cannot proceed with corrupted state.');
+        logger.error('状态校验失败，无法处理损坏的状态。');
         // Schedule a far-future alarm to prevent continuous failed attempts
         await this.ctx.storage.setAlarm(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
         return;
@@ -254,7 +254,7 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
       let currentState = validatedState.data;
       const { dataSourceId, scrapeFrequencyTier } = currentState;
       const alarmLogger = this.logger.child({ operation: 'alarm', dataSourceId });
-      alarmLogger.info('Alarm triggered');
+      alarmLogger.info('Alarm 触发');
 
       // 2. Check config hash/timestamp logic
       const configCheckLogger = alarmLogger.child({ step: 'Config Check' });
@@ -267,12 +267,12 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
       );
 
       if (dbConfigResult.isErr()) {
-        configCheckLogger.error('Failed to query DB for config check', undefined, dbConfigResult.error);
+        configCheckLogger.error('查询数据库配置失败', undefined, dbConfigResult.error);
         return;
       }
 
       if (!dbConfigResult.value) {
-        configCheckLogger.warn('Data source no longer exists in DB. Stopping processing.');
+        configCheckLogger.warn('数据库中数据源不存在，停止处理。');
         return;
       }
 
@@ -280,7 +280,7 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
 
       // Check if config has changed
       if (dbConfig.config_version_hash !== currentState.configVersionHash) {
-        configCheckLogger.info('Config version hash changed, re-initializing', {
+        configCheckLogger.info('配置版本哈希变更，重新初始化', {
           old_hash: currentState.configVersionHash,
           new_hash: dbConfig.config_version_hash,
         });
@@ -323,14 +323,14 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
       if (currentState.sourceType === 'RSS') {
         await this._fetchAndProcessRss(currentState, alarmLogger);
       } else {
-        alarmLogger.error('Unsupported source type', { sourceType: currentState.sourceType });
+        alarmLogger.error('不支持的数据源类型', { sourceType: currentState.sourceType });
         return;
       }
     } catch (error) {
       // Use the latest available logger instance (might be base or detailed)
       const errorLogger = alarmLogger || this.logger;
       errorLogger.error(
-        'Unhandled exception occurred within alarm handler',
+        'Alarm处理程序发生未捕获异常',
         { error_name: error instanceof Error ? error.name : 'UnknownError' },
         error instanceof Error ? error : new Error(String(error)) // Log the error object/stack
       );

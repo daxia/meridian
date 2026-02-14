@@ -17,6 +17,9 @@
       "tag": "v1",
     },
   ],
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
   "durable_objects": {
     "bindings": [
       {

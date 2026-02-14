@@ -26,7 +26,7 @@ const route = new Hono<HonoEnv>().delete(
       operation: 'delete-source',
       source_id: c.req.valid('param').id,
     });
-    routeLogger.info('Attempting to delete source');
+    routeLogger.info('尝试删除源');
 
     const db = getDb(c.env.HYPERDRIVE);
 
@@ -37,13 +37,13 @@ const route = new Hono<HonoEnv>().delete(
     );
     if (sourceResult.isErr()) {
       const error = sourceResult.error instanceof Error ? sourceResult.error : new Error(String(sourceResult.error));
-      routeLogger.error('Failed to fetch source', undefined, error);
-      return c.json({ error: 'Failed to fetch source' }, 500);
+      routeLogger.error('获取源失败', undefined, error);
+      return c.json({ error: '获取源失败' }, 500);
     }
 
     const source = sourceResult.value;
     if (source === undefined) {
-      routeLogger.warn('Source not found');
+      routeLogger.warn('未找到源');
       return c.json({ error: "Source doesn't exist" }, 404);
     }
 

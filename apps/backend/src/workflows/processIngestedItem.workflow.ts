@@ -333,7 +333,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
           }
 
           // Fetch failed, try browser with jitter
-          scrapeLogger.info('Fetch failed, falling back to browser');
+          scrapeLogger.info('Fetch失败，回退到浏览器');
           const jitterTime = Math.random() * 2500 + 500;
           await step.sleep('jitter', jitterTime);
 
@@ -350,7 +350,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
       );
     } catch (error) {
       scrapeLogger.error(
-        'Failed to scrape RSS article',
+        '抓取 RSS 文章失败',
         { error: error instanceof Error ? error.message : String(error) },
         error instanceof Error ? error : new Error(String(error))
       );

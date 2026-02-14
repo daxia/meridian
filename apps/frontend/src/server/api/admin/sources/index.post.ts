@@ -31,8 +31,8 @@ export default defineEventHandler(async event => {
         } satisfies z.infer<typeof DataSourceConfigWrapper>,
       });
   } catch (error) {
-    console.error('Failed to add source', error);
-    throw createError({ statusCode: 500, statusMessage: 'Failed to add source' });
+    console.error('添加源失败', error);
+    throw createError({ statusCode: 500, statusMessage: '添加源失败' });
   }
 
   const config = useRuntimeConfig();
@@ -45,8 +45,8 @@ export default defineEventHandler(async event => {
       },
     });
   } catch (error) {
-    console.error('Failed to initialize DOs', error);
-    throw createError({ statusCode: 500, statusMessage: 'Failed to initialize DOs' });
+    console.error('初始化 DOs 失败', error);
+    throw createError({ statusCode: 500, statusMessage: '初始化 DOs 失败' });
   }
 
   return {

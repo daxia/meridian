@@ -25,8 +25,8 @@ export default defineEventHandler(async event => {
       },
     });
   } catch (error) {
-    console.error('Failed to initialize DO', error);
-    throw createError({ statusCode: 500, statusMessage: 'Failed to initialize DO' });
+    console.error('初始化 DO 失败', error);
+    throw createError({ statusCode: 500, statusMessage: '初始化 DO 失败' });
   }
 
   return { success: true };

@@ -127,3 +127,100 @@ sequenceDiagram
 ### 设计审核报告
 
 （记录审核人、时间、结论）
+
+---
+
+## PRD-需求2：Admin Panel 抓取时间列增强 (已完成)
+
+### 概述
+
+为了提供更精确的运维监控能力，Admin Panel 需展示每个 RSS 源的**最后抓取时间 (Last Fetch)** 和 **下次计划抓取时间 (Next Fetch)**。本设计涉及后端计算逻辑的增强与前端表格列的扩展。
+
+### 目标与约束
+
+- **目标**: 让管理员直观了解抓取任务的调度状态（是否滞后、何时执行）。
+- **约束**:
+    - `nextFetchAt` 不存储在数据库，而是由后端 API 实时计算返回。
+    - 保持表格布局整洁，避免信息过载。
+
+### 功能设计
+
+#### 1. 后端 API 增强 (Backend)
+
+- **API**: `GET /api/admin/sources`
+- **逻辑**:
+    - 遍历所有 Sources。
+    - 计算 `nextFetchAt`:
+        ```typescript
+        const lastChecked = source.lastCheckedAt ? new Date(source.lastCheckedAt).getTime() : 0;
+        const intervalMs = (source.scrapeFrequencyMinutes || 60) * 60 * 1000;
+        const nextFetchAt = lastChecked > 0 ? new Date(lastChecked + intervalMs) : new Date(Date.now()); // 如果从未抓取，假定立即执行
+        ```
+    - 将 `nextFetchAt` 添加到响应对象中。
+
+#### 2. 前端表格扩展 (Frontend)
+
+- **文件**: `apps/frontend/src/pages/admin/index.vue`
+- **变更**:
+    - **Header**: 新增 "Last Fetch" 和 "Next Fetch" 表头。
+    - **Data Row**:
+        - **Last Fetch**: 绑定 `source.lastCheckedAt`。格式化为 `YYYY-MM-DD HH:mm:ss`。
+        - **Next Fetch**: 绑定 `source.nextFetchAt`。格式化为 `YYYY-MM-DD HH:mm:ss`。
+    - **Sort**: 支持按 `nextFetchAt` 排序。
+
+### 详细设计
+
+#### 类图/数据流
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant BackendAPI
+    participant DB
+
+    User->>Frontend: Open Admin Panel
+    Frontend->>BackendAPI: GET /api/admin/sources
+    BackendAPI->>DB: Select * from sources
+    DB-->>BackendAPI: List[Source]
+    BackendAPI->>BackendAPI: Calculate nextFetchAt for each source
+    BackendAPI-->>Frontend: List[SourceWithNextFetch]
+    Frontend->>Frontend: Render Table with new columns
+```
+
+### 接口与数据结构
+
+- **Response DTO**:
+  ```typescript
+  interface AdminSourceItem {
+      id: string;
+      name: string;
+      url: string;
+      lastCheckedAt: string | null;
+      scrapeFrequencyMinutes: number;
+      // ... other fields
+      nextFetchAt: string; // ISO 8601 Date String
+  }
+  ```
+
+### 异常与边界
+
+- **从未抓取**: `lastCheckedAt` 为 null。
+    - `Last Fetch` 显示 "Never"。
+    - `Next Fetch` 显示当前时间（表示应立即抓取）。
+- **已过期 (Overdue)**: 当前时间 > `nextFetchAt`。
+    - 前端暂不作特殊红色高亮，通过 `Next Fetch` 时间早于当前时间可推断。
+
+### 变更清单
+
+1.  `apps/frontend/src/server/api/admin/sources/index.get.ts`: 修改 `GET /sources` 路由处理函数，注入 `nextFetchAt`。
+2.  `apps/frontend/src/pages/admin/index.vue`:
+    - 修改 `<Table>` 结构，增加两列。
+    - 使用 `formatDate` 格式化时间。
+    - 增加 `nextFetchAt` 排序逻辑。
+
+### 测试与验证要点
+
+1.  **时间准确性**: 验证 `Next Fetch` = `Last Fetch` + `Frequency`。
+2.  **UI 适配**: 确认新增列后表格不换行错乱。
+3.  **排序**: 点击 "Next Fetch" 表头，列表应按时间排序。

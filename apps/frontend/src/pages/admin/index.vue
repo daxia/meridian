@@ -104,9 +104,9 @@ const sortedSources = computed(() => {
   const key = sortKey.value as keyof Source;
 
   return [...filteredSources.value].sort((a, b) => {
-    if (key === 'lastChecked') {
-      const aTime = new Date(a[key] ?? '').getTime();
-      const bTime = new Date(b[key] ?? '').getTime();
+    if (key === 'lastChecked' || key === 'nextFetchAt') {
+      const aTime = a[key] ? new Date(a[key]!).getTime() : 0;
+      const bTime = b[key] ? new Date(b[key]!).getTime() : 0;
       return sortOrder.value === 'asc' ? aTime - bTime : bTime - aTime;
     }
 
@@ -361,8 +361,15 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
               class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               @click="toggleSort('lastChecked')"
             >
-              Last Checked
+              Last Fetch
               <span v-if="sortKey === 'lastChecked'" class="text-gray-400">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+            </th>
+            <th
+              class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+              @click="toggleSort('nextFetchAt')"
+            >
+              Next Fetch
+              <span v-if="sortKey === 'nextFetchAt'" class="text-gray-400">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
             </th>
             <th
               class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
@@ -428,6 +435,9 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
               }"
             >
               {{ formatDate(source.lastChecked) }}
+            </td>
+            <td class="px-4 py-2 text-gray-500">
+              {{ formatDate(source.nextFetchAt) }}
             </td>
             <td class="px-4 py-2" :class="{ 'text-red-600': (source.errorRate ?? 0) > 5 }">
               {{ (source.errorRate ?? 0).toFixed(1) }}%

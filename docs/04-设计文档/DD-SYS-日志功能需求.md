@@ -17,6 +17,8 @@ updated: 2026-02-14
 
 - 2026-02-14:
   - [20260214002] 完成设计与实现。
+  - [20260214003] 补充日志轮转与监控设计。
+  - [20260214004] 补充日志中文化设计。
 
 ---
 
@@ -74,3 +76,108 @@ graph TD
 ### 设计审核报告
 
 **审核结果**: 批准
+
+---
+
+## PRD-需求2：日志文件轮转与监控增强 (已完成)
+
+#### 需求编号：20260214003
+
+### 概述
+
+1.  **轮转**: 修改启动脚本，生成时间戳文件。
+2.  **监控**: 利用 Cloudflare Worker Cron Trigger 实现轻量级源状态巡检。
+
+### 功能设计
+
+#### 1. 日志轮转 (start_all.js)
+
+- **逻辑**: 在 `run` 函数中，生成文件名时追加 `YYYY-MM-DD-HH-mm-ss` 后缀。
+- **清理**: (可选) 暂时不自动清理旧日志，留给运维手动管理。
+
+#### 2. 源状态监控 (Backend Worker)
+
+- **触发器**: `scheduled` handler (Cron: `* * * * *`)。
+- **逻辑**:
+  1.  查询数据库 `data_sources` 表，获取 `id`, `url`, `last_checked_at`, `frequency`。
+  2.  遍历计算 `next_check = last_checked_at + frequency`。
+  3.  `diff = next_check - now`。
+  4.  Logger 输出 Info 级别日志。
+
+### 详细设计
+
+#### Log Rotation 实现
+```javascript
+const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+const logFileName = `${name.replace(/\s+/g, '_')}_${timestamp}.log`;
+```
+
+#### Cron Job 实现
+在 `apps/backend/src/index.ts`:
+
+```typescript
+async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+  const db = getDb(env.DATABASE_URL);
+  const sources = await db.query.data_sources.findMany({
+    where: eq(schema.data_sources.status, 'ACTIVE'),
+    columns: { id: true, url: true, lastCheckedAt: true, frequency: true }
+  });
+  
+  const now = Date.now();
+  for (const source of sources) {
+    // ... calculation ...
+    console.log(`[SourceMonitor] ...`);
+  }
+}
+```
+
+### 变更清单
+
+| 文件路径 | 变更类型 | 说明 |
+| :--- | :--- | :--- |
+| `start_all.js` | 修改 | 增加时间戳文件名生成逻辑。 |
+| `apps/backend/src/index.ts` | 修改 | 增加 `scheduled` 导出函数。 |
+| `apps/backend/wrangler.jsonc` | 修改 | 增加 `triggers.crons` 配置。 |
+
+### 测试与验证要点
+
+1.  **轮转**: 重启服务，确认 `logs/` 下生成新文件。
+2.  **监控**: 等待 1 分钟，确认 Backend 日志中出现 `[SourceMonitor]` 记录。
+
+---
+
+## PRD-需求3：日志记录中文化 (待实现)
+
+#### 需求编号：20260214004
+
+### 概述
+
+修改 `start_all.js` 和后端监控代码，将英文日志替换为中文。
+
+### 功能设计
+
+#### 1. 启动脚本 (start_all.js)
+
+替换硬编码的字符串。
+
+| 原文 | 中文 |
+| :--- | :--- |
+| "Starting..." | "正在启动..." |
+| "Services started" | "所有服务已启动" |
+| "exited with code" | "退出，代码" |
+
+#### 2. 后端监控 (Backend)
+
+在实现监控逻辑时，直接使用中文模板字符串。
+
+```typescript
+console.log(`[SourceMonitor] 源 ${source.url} (ID: ${source.id}) 距离下次抓取还有 ${diff} 秒`);
+```
+
+### 变更清单
+
+| 文件路径 | 变更类型 | 说明 |
+| :--- | :--- | :--- |
+| `start_all.js` | 修改 | 汉化日志字符串。 |
+| `apps/backend/src/index.ts` | 修改 | (如果已存在监控代码) 汉化日志；(若新建) 直接写中文。 |
+

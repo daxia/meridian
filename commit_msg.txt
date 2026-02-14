@@ -1,6 +1,6 @@
-docs(sys): implement logging requirements and strict doc workflow
+feat: 完成Admin页面字段修复与日志本地化
 
-- Implement ANSI strip for log files in start_all.js
-- Standardize PRD/DD naming conventions (remove date suffix)
-- Enforce strict template usage in AGENTS.md
-- Create PRD-SYS and DD-SYS for logging module
+- 修复Admin Panel数据NaN/Unknown问题
+- 新增Last/Next Fetch抓取时间列
+- 完善日志轮转与中文支持
+- 整理提示词文档

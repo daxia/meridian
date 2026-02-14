@@ -21,9 +21,28 @@ function stripAnsi(str) {
   }
 });
 
-function run(cmd, args, cwd, name, logFile, env = process.env) {
-  console.log(`Starting ${name}...`);
+function run(cmd, args, cwd, name, baseLogName, env = process.env) {
+  console.log(`正在启动 ${name}...`);
+  
+  // Log Rotation: Add timestamp to filename
+  const now = new Date();
+  const timestamp = now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + '-' +
+    String(now.getHours()).padStart(2, '0') + '-' +
+    String(now.getMinutes()).padStart(2, '0') + '-' +
+    String(now.getSeconds()).padStart(2, '0');
+    
+  const logFile = `${baseLogName}-${timestamp}.log`;
+  console.log(`[${name}] 日志写入到 ${logFile}`);
+  
   const logStream = fs.createWriteStream(path.join(logsDir, logFile), { flags: 'a' });
+  
+  // Inject System Header in Chinese
+  logStream.write(`[系统] 正在启动服务: ${name}\n`);
+  logStream.write(`[系统] 启动时间: ${now.toLocaleString('zh-CN')}\n`);
+  logStream.write(`[系统] 日志文件: ${logFile}\n`);
+  logStream.write('-'.repeat(50) + '\n');
   
   const p = spawn(cmd, args, { cwd, shell: true, stdio: 'pipe', env });
   
@@ -38,13 +57,13 @@ function run(cmd, args, cwd, name, logFile, env = process.env) {
   });
   
   p.on('error', (err) => {
-    console.error(`${name} Error:`, err);
-    logStream.write(`ERROR: ${err}\n`);
+    console.error(`${name} 错误:`, err);
+    logStream.write(`[系统] 错误: ${err}\n`);
   });
   
   p.on('close', code => {
-    console.log(`${name} exited with ${code}`);
-    logStream.write(`Exited with code ${code}\n`);
+    console.log(`${name} 退出，代码 ${code}`);
+    logStream.write(`[系统] 服务已停止，退出代码 ${code}\n`);
     logStream.end();
   });
   
@@ -60,26 +79,26 @@ const env = {
 };
 
 // Build Logger first
-console.log('Building @meridian/logger...');
+console.log('正在构建 @meridian/logger...');
 const buildLogger = spawn('pnpm', ['--filter', '@meridian/logger', 'build'], { cwd: process.cwd(), shell: true, stdio: 'inherit', env });
 buildLogger.on('close', (code) => {
   if (code !== 0) {
-    console.error('Logger build failed!');
+    console.error('Logger 构建失败！');
     process.exit(1);
   }
   
   // Start Backend
-  run('pnpm', ['--filter', '@meridian/backend', 'dev'], process.cwd(), 'Backend (Wrangler)', 'backend.log', env);
+  run('pnpm', ['--filter', '@meridian/backend', 'dev'], process.cwd(), 'Backend (Wrangler)', 'backend', env);
 
   // Start Frontend
-  run('pnpm', ['--filter', '@meridian/frontend', 'dev'], process.cwd(), 'Frontend (Nuxt)', 'frontend.log', env);
+  run('pnpm', ['--filter', '@meridian/frontend', 'dev'], process.cwd(), 'Frontend (Nuxt)', 'frontend', env);
   
   // ML Service
   run('uv', ['run', 'fastapi', 'dev', 'src/meridian_ml_service/main.py'], 
       path.join(process.cwd(), 'services/meridian-ml-service'), 
       'ML Service',
-      'ml_service.log',
+      'ml_service',
       { ...env, PYTHONUTF8: '1' });
 });
 
-console.log('Services started. Logs available in ./logs directory. Press Ctrl+C to stop.');
+console.log('所有服务已启动。日志位于 ./logs 目录。按 Ctrl+C 停止。');

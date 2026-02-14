@@ -59,6 +59,13 @@ export default defineEventHandler(async event => {
               ? '6 Hours'
               : 'Daily',
       lastChecked: source.lastChecked?.toISOString(),
+      scrapeFrequencyMinutes: source.scrape_frequency_minutes,
+      nextFetchAt:
+        source.lastChecked && source.scrape_frequency_minutes
+          ? new Date(
+              new Date(source.lastChecked).getTime() + source.scrape_frequency_minutes * 60 * 1000
+            ).toISOString()
+          : new Date(Date.now()).toISOString(),
 
       // article counts
       totalArticles: sourceArticles.length,

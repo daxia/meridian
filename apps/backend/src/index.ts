@@ -2,6 +2,8 @@ import app from './app';
 import { DataSourceIngestorDO } from './durable_objects/dataSourceIngestorDO';
 import { Logger } from '@meridian/logger';
 import { type ProcessArticlesParams, startProcessArticleWorkflow } from './workflows/processIngestedItem.workflow';
+import { getDb } from './lib/utils';
+import { $data_sources } from '@meridian/database';
 
 export type Env = {
   // Bindings
@@ -69,8 +71,8 @@ export default {
     for (const chunk of articleChunks) {
       const workflowResult = await startProcessArticleWorkflow(env, { ingested_item_ids: chunk });
       if (workflowResult.isErr()) {
-        batchLogger.error(
-          'Failed to trigger ProcessArticles Workflow',
+        queueLogger.error(
+          '触发文章处理工作流失败',
           { error_message: workflowResult.error.message, chunk_size: chunk.length },
           workflowResult.error
         );
@@ -79,13 +81,46 @@ export default {
         return;
       }
 
-      batchLogger.info('Successfully triggered ProcessArticles Workflow for chunk', {
+      queueLogger.info('成功触发文章处理工作流', {
         workflow_id: workflowResult.value.id,
         chunk_size: chunk.length,
       });
     }
 
     batch.ackAll(); // Acknowledge the entire batch after all chunks are processed
+  },
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    const logger = new Logger({ service: 'source-monitor' });
+    // Use the utility function that handles Hyperdrive connection string
+    const db = getDb(env.HYPERDRIVE);
+
+    try {
+      const sources = await db.select().from($data_sources);
+      const now = Date.now();
+
+      for (const source of sources) {
+        // Frequency is in minutes. Default to 240 if null/undefined
+        const frequencyMs = (source.scrape_frequency_minutes || 240) * 60 * 1000;
+        
+        // Base time priority: lastChecked -> do_initialized_at -> created_at -> now
+        // Note: Dates from Drizzle are Date objects
+        const lastTime = source.lastChecked || source.do_initialized_at || source.created_at || new Date();
+        const nextCheck = lastTime.getTime() + frequencyMs;
+        
+        const diffMs = nextCheck - now;
+        const diffSec = Math.round(diffMs / 1000);
+        
+        logger.info(`[SourceMonitor] 源 ${source.name} (ID: ${source.id}) 距离下次抓取还有 ${diffSec} 秒`, {
+          source_id: source.id,
+          source_name: source.name,
+          last_checked: source.lastChecked,
+          frequency_minutes: source.scrape_frequency_minutes,
+          next_fetch_in_seconds: diffSec
+        });
+      }
+    } catch (error) {
+      logger.error('源状态监控失败', { error: error instanceof Error ? error.message : String(error) });
+    }
   },
 } satisfies ExportedHandler<Env>;
 

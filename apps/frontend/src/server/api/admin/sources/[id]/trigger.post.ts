@@ -25,8 +25,8 @@ export default defineEventHandler(async event => {
       },
     });
   } catch (error) {
-    console.error('Failed to trigger fetch', error);
-    throw createError({ statusCode: 500, statusMessage: 'Failed to trigger fetch' });
+    console.error('触发抓取失败', error);
+    throw createError({ statusCode: 500, statusMessage: '触发抓取失败' });
   }
 
   return { success: true };

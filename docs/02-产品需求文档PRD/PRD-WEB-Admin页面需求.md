@@ -28,9 +28,13 @@ Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。当前 "Sour
 ## 2. 变更记录
 
 - **2026-02-14**:
-  - **需求编号**: 20260214001
-  - **内容**: 修复日期 NaN、百分比 N/A 及 Source Unknown 问题。
-  - **目标**: 恢复 Admin Panel 数据可读性。
+    - **需求编号**: 20260214005
+    - **内容**: 新增 "Last Fetch" 和 "Next Fetch" 列。
+    - **目标**: 增强源抓取调度的可观测性。
+  - **2026-02-14**:
+    - **需求编号**: 20260214001
+    - **内容**: 修复日期 NaN、百分比 N/A 及 Source Unknown 问题。
+    - **目标**: 恢复 Admin Panel 数据可读性。
 
 ---
 
@@ -75,3 +79,42 @@ Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。当前 "Sour
 1.  打开 Admin Panel，所有 Source 的 "LAST CHECKED" 显示为有效日期格式或 "Never"。
 2.  没有任何 Source 显示为 "Unknown"（除非数据库中确实没名字）。
 3.  无数据的 Source，错误率和成功率显示为 "0%"，日均文章数显示为 "0"。
+
+---
+
+## 需求2：Admin Panel 抓取时间列增强 (进行中)
+
+**需求编号**: 20260214005
+
+**DD编号**: DD-WEB-Admin页面需求
+
+### 1. 需求功能点
+
+**1）新增抓取时间列**:
+
+- **描述**: 在 "Source Analytics" 表格中新增 "Last Fetch" 和 "Next Fetch" 两列，提供更精确的运维视角。
+- **UI/UX 交互**: 表格列宽需自适应调整。
+- **详细规则**:
+    1.  **Last Fetch (上次抓取)**:
+        - 显示最后一次实际执行抓取的时间。
+        - 格式：`YYYY-MM-DD HH:mm:ss`。
+        - 若无记录，显示 `Never`。
+    2.  **Next Fetch (下次抓取)**:
+        - 显示下一次计划抓取的时间。
+        - 计算逻辑：`Last Fetch + Frequency`。
+        - 格式：`YYYY-MM-DD HH:mm:ss`。
+    3.  **Last Checked (现有列)**:
+        - *决策*: 将现有的 "LAST CHECKED" 列重命名为 "Last Fetch"，并新增 "Next Fetch" 列。
+
+**2）后端数据支持**:
+
+- **描述**: API 需返回下一次抓取的计算结果。
+- **详细规则**:
+    - 接口 `GET /api/admin/sources` 需在返回对象中增加 `nextFetchAt` 字段。
+    - 计算公式：`nextFetchAt = lastChecked + scrapeFrequencyMinutes * 60 * 1000`。
+
+### 2. 验收标准
+
+1.  Admin Panel 表格中包含 "Last Fetch" 和 "Next Fetch" 列。
+2.  "Next Fetch" 显示的时间应晚于当前时间（除非已过期未执行）。
+3.  时间格式清晰易读。
