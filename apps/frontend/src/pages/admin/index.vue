@@ -124,8 +124,11 @@ const toggleSort = (key: keyof Source) => {
     sortOrder.value = 'asc';
   }
 };
-const formatDate = (dateStr: string) => {
+const formatDate = (dateStr: string | null | undefined) => {
+  if (!dateStr) return 'Never';
   const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return 'Never';
+
   const Y = date.getFullYear();
   const M = String(date.getMonth() + 1).padStart(2, '0');
   const D = String(date.getDate()).padStart(2, '0');
@@ -413,9 +416,9 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
               <span class="inline-block w-3 h-3 rounded-full" :class="getHealthColor(getSourceHealth(source))" />
             </td>
             <td class="px-4 py-2">
-              <NuxtLink :to="source.url" target="_blank" class="text-gray-500 hover:underline">{{
-                source.name
-              }}</NuxtLink>
+              <NuxtLink :to="source.url" target="_blank" class="text-gray-500 hover:underline">
+                {{ source.name || `Unnamed Source (ID: ${source.id})` }}
+              </NuxtLink>
             </td>
             <td
               class="px-4 py-2"
@@ -424,14 +427,14 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
                 'text-red-600': !source.lastChecked,
               }"
             >
-              {{ formatDate(source.lastChecked ?? '') }}
+              {{ formatDate(source.lastChecked) }}
             </td>
             <td class="px-4 py-2" :class="{ 'text-red-600': (source.errorRate ?? 0) > 5 }">
-              {{ source.errorRate?.toFixed(1) ?? 'N/A' }}%
+              {{ (source.errorRate ?? 0).toFixed(1) }}%
             </td>
-            <td class="px-4 py-2">{{ source.processSuccessRate?.toFixed(1) ?? 'N/A' }}%</td>
+            <td class="px-4 py-2">{{ (source.processSuccessRate ?? 0).toFixed(1) }}%</td>
             <td class="px-4 py-2">{{ source.totalArticles }}</td>
-            <td class="px-4 py-2">{{ source.avgPerDay ? source.avgPerDay.toFixed(1) : 'N/A' }}</td>
+            <td class="px-4 py-2">{{ (source.avgPerDay ?? 0).toFixed(1) }}</td>
 
             <td class="px-4 py-2">
               <component

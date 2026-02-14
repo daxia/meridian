@@ -1,4 +1,5 @@
 ---
+---
 doc_type: prd
 doc_id: PRD-主题简短描述-YYYYMMDD
 owner: backend
@@ -87,3 +88,5 @@ updated: YYYY-MM-DD
 ## 需求2：我的需求中需求2标题 (待实现|进行中|已完成|取消)
 
     xxx
+
+---

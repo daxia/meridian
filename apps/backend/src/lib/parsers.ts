@@ -39,7 +39,9 @@ function cleanUrl(url: string) {
  * @param xml The XML content of the RSS feed as a string
  * @returns A Result containing either an array of parsed feed items or an error
  */
-export async function parseRSSFeed(xml: string): Promise<Result<z.infer<typeof rssFeedSchema>[], Error>> {
+export async function parseRSSFeed(
+  xml: string
+): Promise<Result<{ items: z.infer<typeof rssFeedSchema>[]; title?: string }, Error>> {
   const safeParser = Result.fromThrowable(
     (xml: string) => new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' }).parse(xml),
     e => (e instanceof Error ? e : new Error(String(e)))
@@ -51,6 +53,13 @@ export async function parseRSSFeed(xml: string): Promise<Result<z.infer<typeof r
   }
 
   const result = parsedXml.value;
+
+  // Extract feed title
+  let feedTitle = result.rss?.channel?.title || result.feed?.title || result.title;
+  if (typeof feedTitle === 'object' && feedTitle['#text']) {
+    feedTitle = feedTitle['#text'];
+  }
+  const title = typeof feedTitle === 'string' && feedTitle.trim().length > 0 ? cleanString(feedTitle) : undefined;
 
   // handle various feed structures
   let items = result.rss?.channel?.item || result.feed?.entry || result.item || result['rdf:RDF']?.item || [];
@@ -121,7 +130,7 @@ export async function parseRSSFeed(xml: string): Promise<Result<z.infer<typeof r
     return err(new Error(`Validation error: ${parsedItems.error.message}`));
   }
 
-  return ok(parsedItems.data);
+  return ok({ items: parsedItems.data, title });
 }
 
 /**

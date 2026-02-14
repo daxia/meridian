@@ -19,7 +19,7 @@ export default defineEventHandler(async event => {
     await getDB(event)
       .insert($data_sources)
       .values({
-        name: 'Unknown',
+        name: new URL(bodyResult.data.url).hostname,
         source_type: 'RSS',
         config: {
           source_type: 'RSS',

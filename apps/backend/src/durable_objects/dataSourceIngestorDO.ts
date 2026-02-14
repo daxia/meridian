@@ -391,7 +391,20 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
       // Error already logged by attemptWithRetries
       return;
     }
-    const articles = parseResult.value; // Type: ParsedArticle[]
+    const { items: articles, title: feedTitle } = parseResult.value;
+
+    if (feedTitle) {
+      const nameUpdateLogger = logger.child({ step: 'Name Update', feedTitle });
+      try {
+        await getDb(this.env.HYPERDRIVE)
+          .update($data_sources)
+          .set({ name: feedTitle })
+          .where(eq($data_sources.id, dataSourceId));
+        nameUpdateLogger.info('Updated source name from feed');
+      } catch (e) {
+        nameUpdateLogger.warn('Failed to update source name', { error: e });
+      }
+    }
 
     // --- Process Articles and Store Raw Data in R2 ---
     const now = Date.now();

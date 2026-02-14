@@ -107,8 +107,8 @@ pnpm --filter @meridian/frontend dev
 ### 文档命名规范（必须遵守）
 
 - **01-我的需求**：`我的需求.md`，追加原始需求。
-- **02-PRD**：`PRD-[范围]-主题-YYYYMMDD.md`
-- **04-设计文档**：`DD-[范围]-主题-YYYYMMDD.md`
+- **02-PRD**：`PRD-[范围]-主题.md`（不带日期）
+- **04-设计文档**：`DD-[范围]-主题.md`（不带日期）
 - **范围标识**:
   - `-WEB-`: 前端相关
   - `-API-`: 后端 API/Worker 相关
@@ -119,10 +119,16 @@ pnpm --filter @meridian/frontend dev
 ### 需求映射与一致性
 
 1.  **一对一映射**：PRD 条目必须对应 `我的需求.md` 中的编号。
-2.  **模块化归口**：
-    *   **Frontend**: `docs/02-产品需求文档PRD/PRD-WEB-*.md`
-    *   **Backend**: `docs/02-产品需求文档PRD/PRD-API-*.md`
-    *   **Schema/DB**: `docs/02-产品需求文档PRD/PRD-DB-*.md`
+2.  **模块化归口**（PRD 与 DD 均须遵守）：
+    *   **Frontend**: `docs/02-产品需求文档PRD/PRD-WEB-*.md` 及 `docs/04-设计文档/DD-WEB-*.md`
+    *   **Backend**: `docs/02-产品需求文档PRD/PRD-API-*.md` 及 `docs/04-设计文档/DD-API-*.md`
+    *   **Schema/DB**: `docs/02-产品需求文档PRD/PRD-DB-*.md` 及 `docs/04-设计文档/DD-DB-*.md`
+    *   **ML Service**: `docs/02-产品需求文档PRD/PRD-ML-*.md` 及 `docs/04-设计文档/DD-ML-*.md`
+    *   **System/DevOps**: `docs/02-产品需求文档PRD/PRD-SYS-*.md` 及 `docs/04-设计文档/DD-SYS-*.md`
+
+### 模板规范（严格执行）
+
+PRD 和 DD 必须严格遵循 **`.cursor/rules/docs-agents_v1.md`** 中定义的 Markdown 模板（包含 YAML Header、变更记录、需求编号等），**严禁使用自由格式**。
 
 ### 修复 Bug 的完整流程
 
