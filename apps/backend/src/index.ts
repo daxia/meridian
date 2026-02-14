@@ -29,6 +29,9 @@ export type Env = {
   GEMINI_API_KEY: string;
   GEMINI_BASE_URL: string;
 
+  GLM_API_KEY: string | undefined;
+  GLM_BASE_URL: string | undefined;
+
   OPENAI_API_KEY: string | undefined;
   OPENAI_BASE_URL: string | undefined;
 

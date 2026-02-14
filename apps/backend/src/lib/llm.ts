@@ -3,7 +3,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModel } from 'ai';
 import type { Env } from '../index';
 
-export type LLMProvider = 'google' | 'openai';
+export type LLMProvider = 'google' | 'openai' | 'glm';
 
 export interface LLMConfig {
   provider: LLMProvider;
@@ -14,10 +14,20 @@ export interface LLMConfig {
 
 /**
  * Creates an AI SDK LanguageModel instance based on configuration.
- * Supports Google (Gemini) and OpenAI compatible providers.
+ * Supports Google (Gemini) and OpenAI compatible providers (including GLM).
  */
 export function createLLMModel(env: Env, config: LLMConfig): LanguageModel {
   const provider = config.provider || 'google';
+
+  if (provider === 'glm') {
+    // GLM (Zhipu AI) is OpenAI compatible
+    const openai = createOpenAI({
+      apiKey: config.apiKey || env.GLM_API_KEY,
+      baseURL: config.baseURL || env.GLM_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4/',
+    });
+
+    return openai(config.modelName || 'glm-4-flash');
+  }
 
   if (provider === 'openai') {
     // For OpenAI compatible providers (DeepSeek, OpenRouter, etc.)

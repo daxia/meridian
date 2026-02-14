@@ -15,9 +15,21 @@ const route = new Hono<HonoEnv>()
     const db = getDb(c.env.HYPERDRIVE);
     const analysisMode = await getSetting(db, SETTINGS_KEYS.ARTICLE_ANALYSIS_MODE, 'serial');
     
+    // Get LLM settings
+    const llmProvider = await getSetting(db, SETTINGS_KEYS.LLM_PROVIDER, 'google');
+    const llmModel = await getSetting(db, SETTINGS_KEYS.LLM_MODEL, '');
+    // Don't return API key and BaseURL by default for security, or maybe we should?
+    // For now, let's return them as this is a personal tool
+    const llmApiKey = await getSetting(db, SETTINGS_KEYS.LLM_API_KEY, '');
+    const llmBaseURL = await getSetting(db, SETTINGS_KEYS.LLM_BASE_URL, '');
+
     return c.json({
       settings: {
         [SETTINGS_KEYS.ARTICLE_ANALYSIS_MODE]: analysisMode,
+        [SETTINGS_KEYS.LLM_PROVIDER]: llmProvider,
+        [SETTINGS_KEYS.LLM_MODEL]: llmModel,
+        [SETTINGS_KEYS.LLM_API_KEY]: llmApiKey,
+        [SETTINGS_KEYS.LLM_BASE_URL]: llmBaseURL,
       }
     });
   })
@@ -34,6 +46,20 @@ const route = new Hono<HonoEnv>()
         return c.json({ error: 'Invalid mode' }, 400);
       }
       await setSetting(db, SETTINGS_KEYS.ARTICLE_ANALYSIS_MODE, mode, 'Article analysis concurrency mode');
+    }
+
+    // LLM Settings
+    if (body[SETTINGS_KEYS.LLM_PROVIDER]) {
+        await setSetting(db, SETTINGS_KEYS.LLM_PROVIDER, body[SETTINGS_KEYS.LLM_PROVIDER], 'LLM Provider');
+    }
+    if (body[SETTINGS_KEYS.LLM_MODEL] !== undefined) {
+        await setSetting(db, SETTINGS_KEYS.LLM_MODEL, body[SETTINGS_KEYS.LLM_MODEL], 'LLM Model Name');
+    }
+    if (body[SETTINGS_KEYS.LLM_API_KEY] !== undefined) {
+        await setSetting(db, SETTINGS_KEYS.LLM_API_KEY, body[SETTINGS_KEYS.LLM_API_KEY], 'LLM API Key');
+    }
+    if (body[SETTINGS_KEYS.LLM_BASE_URL] !== undefined) {
+        await setSetting(db, SETTINGS_KEYS.LLM_BASE_URL, body[SETTINGS_KEYS.LLM_BASE_URL], 'LLM Base URL');
     }
     
     return c.json({ success: true });

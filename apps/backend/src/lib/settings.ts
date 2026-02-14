@@ -5,7 +5,7 @@ type DrizzleDB = ReturnType<typeof getDb>;
 
 export const SETTINGS_KEYS = {
   ARTICLE_ANALYSIS_MODE: 'article_analysis_mode', // 'serial' | 'parallel'
-  LLM_PROVIDER: 'llm_provider', // 'google' | 'openai'
+  LLM_PROVIDER: 'llm_provider', // 'google' | 'openai' | 'glm'
   LLM_API_KEY: 'llm_api_key',
   LLM_BASE_URL: 'llm_base_url',
   LLM_MODEL: 'llm_model',
