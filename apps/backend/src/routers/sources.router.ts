@@ -37,7 +37,7 @@ const route = new Hono<HonoEnv>().delete(
     );
     if (sourceResult.isErr()) {
       const error = sourceResult.error instanceof Error ? sourceResult.error : new Error(String(sourceResult.error));
-      routeLogger.error('获取源失败', undefined, error);
+      routeLogger.error('获取源失败', error);
       return c.json({ error: '获取源失败' }, 500);
     }
 
@@ -47,7 +47,7 @@ const route = new Hono<HonoEnv>().delete(
       return c.json({ error: "Source doesn't exist" }, 404);
     }
 
-    routeLogger.debug('Source found, proceeding with deletion', { source_url: source.config.config.url });
+    routeLogger.debug('找到源，正在进行删除', { source_url: source.config.config.url });
     const doId = c.env.DATA_SOURCE_INGESTOR.idFromName(source.config.config.url); // Use URL for ID stability
     const stub = c.env.DATA_SOURCE_INGESTOR.get(doId);
 
@@ -56,11 +56,11 @@ const route = new Hono<HonoEnv>().delete(
     );
     if (deleteResult.isErr()) {
       const error = deleteResult.error instanceof Error ? deleteResult.error : new Error(String(deleteResult.error));
-      routeLogger.error('Failed to delete source', undefined, error);
+      routeLogger.error('删除源失败', error);
       return c.json({ error: 'Failed to delete source' }, 500);
     }
 
-    routeLogger.info('Source deleted successfully');
+    routeLogger.info('源删除成功');
     return c.json({ success: true });
   }
 );

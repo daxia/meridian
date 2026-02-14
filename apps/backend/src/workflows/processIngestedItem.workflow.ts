@@ -67,7 +67,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
       initial_article_count: _event.payload.ingested_item_ids.length,
     });
 
-    logger.info('Starting workflow run');
+    logger.info('开始运行工作流');
 
     const articles = await step.do('get articles', dbStepConfig, async () =>
       db
@@ -96,7 +96,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
     );
 
     const fetchLogger = logger.child({ articles_count: articles.length });
-    fetchLogger.info('Fetching article contents');
+    fetchLogger.info('正在抓取文章内容');
 
     // Create rate limiter with article processing specific settings
     const rateLimiter = new DomainRateLimiter<{
@@ -123,7 +123,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
 
       // Skip PDFs immediately
       if (article.url.toLowerCase().endsWith('.pdf')) {
-        scrapeLogger.info('Skipping PDF article');
+        scrapeLogger.info('跳过 PDF 文章');
 
         // Update the article status to mark it as skipped PDF
         await step.do(`mark PDF article ${article.id} as skipped`, dbStepConfig, async () => {
@@ -145,7 +145,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
         return await this._processRSSArticle(article, scrapeLogger, step, env);
       }
 
-      scrapeLogger.error('Unsupported source type', { source_type: article.sourceType });
+      scrapeLogger.error('不支持的数据源类型', undefined, { source_type: article.sourceType });
       return { id: article.id, success: false, error: `Unsupported source type: ${article.sourceType}` };
     });
 
@@ -171,7 +171,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
         });
 
         await step.do(`update db for successful article ${result.id}`, dbStepConfig, async () => {
-          articleLogger.debug('Updating article status to CONTENT_FETCHED');
+          articleLogger.debug('更新文章状态为 CONTENT_FETCHED');
           return db
             .update($ingested_items)
             .set({
@@ -187,7 +187,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
           const failReason = result.error ? String(result.error) : 'Unknown error';
           const status = result.error?.includes('render') ? 'FAILED_RENDER' : 'FAILED_FETCH';
 
-          articleLogger.warn('Marking article as failed during content fetch', {
+          articleLogger.warn('标记文章在内容抓取时失败', {
             fail_reason: failReason,
             status,
           });
@@ -210,13 +210,13 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
       fetch_fail_count: failCount,
     });
 
-    processingLogger.info('Processing articles with content extraction and embeddings');
+    processingLogger.info('正在处理文章：内容提取与 Embeddings 生成');
 
     // process articles for embeddings
     const analysisResults = await Promise.allSettled(
       articlesToProcess.map(async article => {
         const articleLogger = processingLogger.child({ article_id: article.id });
-        articleLogger.info('Generating article representation');
+        articleLogger.info('正在生成文章表示');
 
         // Analyze article
         const articleRepresentation = await step.do(
@@ -232,11 +232,11 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
           }
         );
 
-        articleLogger.info('Embedding article representation');
+        articleLogger.info('正在 Embed 文章表示');
 
         // Generate embeddings (no need to upload to R2 as it's already handled in processing)
         const embeddingResult = await step.do(`generate embeddings for article ${article.id}`, async () => {
-          articleLogger.info('Generating embeddings');
+          articleLogger.info('正在生成 Embeddings');
           const embeddings = await createEmbeddings(env, [articleRepresentation]);
           if (embeddings.isErr()) throw embeddings.error;
           return embeddings.value[0];
@@ -259,7 +259,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
             .where(eq($ingested_items.id, article.id))
         );
 
-        articleLogger.info('Article processed successfully');
+        articleLogger.info('文章处理成功');
 
         return { id: article.id, success: true };
       })
@@ -274,7 +274,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
       result => result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.success)
     ).length;
 
-    logger.info('Workflow completed', {
+    logger.info('工作流完成', {
       total_articles: articlesToProcess.length,
       successful_analyses: successfulAnalyses,
       failed_analyses: failedAnalyses,
@@ -297,7 +297,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
     step: WorkflowStep,
     env: Env
   ) {
-    scrapeLogger.info('Processing RSS article');
+    scrapeLogger.info('正在处理 RSS 文章');
 
     // This will contain either a successful result or a controlled error
     // biome-ignore lint/suspicious/noImplicitAnyLet: <explanation>
@@ -309,7 +309,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
         async () => {
           // During retries, let errors bubble up naturally
           if (article.config.config.rss_paywall === true) {
-            scrapeLogger.info('Using browser to fetch article (tricky domain)');
+            scrapeLogger.info('使用浏览器抓取文章 (复杂域名)');
             const browserResult = await getArticleWithBrowser(env, article.url);
             if (browserResult.isErr()) throw browserResult.error.error;
 
@@ -321,7 +321,7 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
             };
           }
 
-          scrapeLogger.info('Attempting fetch-first approach');
+          scrapeLogger.info('尝试优先使用 fetch 抓取');
           const fetchResult = await getArticleWithFetch(article.url);
           if (!fetchResult.isErr()) {
             return {
@@ -351,8 +351,8 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
     } catch (error) {
       scrapeLogger.error(
         '抓取 RSS 文章失败',
-        { error: error instanceof Error ? error.message : String(error) },
-        error instanceof Error ? error : new Error(String(error))
+        error instanceof Error ? error : new Error(String(error)),
+        { error: error instanceof Error ? error.message : String(error) }
       );
       // After all retries failed, return a structured error
       return {
@@ -384,9 +384,9 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
       try {
         await env.ARTICLES_BUCKET.put(r2Key, fullText);
         contentBodyR2Key = r2Key;
-        scrapeLogger.info('Stored full content in R2', { r2_key: r2Key, content_length: fullText.length });
+        scrapeLogger.info('完整内容已存入 R2', { r2_key: r2Key, content_length: fullText.length });
       } catch (r2Error) {
-        scrapeLogger.error('Failed to store content in R2', { r2_key: r2Key }, r2Error as Error);
+        scrapeLogger.error('存储内容到 R2 失败', r2Error as Error, { r2_key: r2Key });
         // Continue with truncated content in DB only
       }
     }

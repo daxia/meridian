@@ -67,33 +67,33 @@ async function attemptWithRetries<T, E extends Error>(
   let lastError: E | undefined;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    logger.debug(`Attempt ${attempt}/${maxRetries}...`);
+    logger.debug(`尝试 ${attempt}/${maxRetries}...`);
     const result = await operation();
 
     if (result.isOk()) {
-      logger.debug(`Attempt ${attempt} successful.`);
+      logger.debug(`尝试 ${attempt} 成功。`);
       return ok(result.value); // Return successful result immediately
     }
 
     lastError = result.error; // Store the error
     logger.warn(
-      `Attempt ${attempt} failed.`,
+      `尝试 ${attempt} 失败。`,
       { error_name: lastError.name, error_message: lastError.message },
       lastError
     );
 
     // If not the last attempt, wait before retrying
     if (attempt < maxRetries) {
-      const delay = baseDelay * 2 ** (attempt - 1);
+      const delay = initialDelayMs * 2 ** (attempt - 1);
       logger.debug('等待重试', { delay_ms: delay });
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
 
   // If loop finishes, all retries failed
-  logger.error('超过最大重试次数失败', { max_retries: maxRetries }, lastError);
+  logger.error('超过最大重试次数失败', lastError, { max_retries: maxRetries });
   // biome-ignore lint/style/noNonNullAssertion: <explanation>
-  return err(lastError!);
+  return err(lastError!); 
 }
 
 /**
@@ -119,7 +119,7 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.logger = new Logger({ durable_object: 'SourceScraperDO', do_id: this.ctx.id.toString() });
-    this.logger.info('DO initialized');
+    this.logger.info('DO 已初始化');
   }
 
   /**
@@ -140,19 +140,19 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
       dataSourceId: dataSourceData.id,
       source_type: dataSourceData.source_type,
     });
-    logger.info('Initializing with data', { data_source_data: dataSourceData });
+    logger.info('正在使用数据初始化', { data_source_data: dataSourceData });
 
     const sourceExistsResult = await ResultAsync.fromPromise(
       getDb(this.env.HYPERDRIVE).query.$data_sources.findFirst({ where: (s, { eq }) => eq(s.id, dataSourceData.id) }),
       e => new Error(`Database query failed: ${e}`)
     );
     if (sourceExistsResult.isErr()) {
-      logger.error('Failed to query DB for data source', undefined, sourceExistsResult.error);
+      logger.error('查询数据库数据源失败', sourceExistsResult.error);
       throw sourceExistsResult.error; // Rethrow DB error
     }
     if (!sourceExistsResult.value) {
       logger.warn(
-        "Data source doesn't exist in DB. This is likely due to a race condition where the source was deleted after being queued for initialization."
+        "数据库中不存在该数据源。这可能是由于在排队等待初始化后，源已被删除导致的竞争条件。"
       );
       // Instead of throwing, we'll just return without setting up the DO
       return;
@@ -161,7 +161,7 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
     // Parse the config JSONB using the appropriate Zod schema (assuming RSS for now)
     const parsedConfig = DataSourceConfigWrapper.safeParse(dataSourceData.config);
     if (!parsedConfig.success) {
-      logger.error('Failed to parse RSS config', { config: dataSourceData.config, error: parsedConfig.error });
+      logger.error('解析 RSS 配置失败', parsedConfig.error, { config: dataSourceData.config });
       throw new Error(`Invalid RSS config: ${parsedConfig.error.message}`);
     }
 
@@ -180,15 +180,15 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
       try {
         await this.ctx.storage.put('state', state);
         putSuccess = true;
-        logger.info('Initialized state successfully.');
+        logger.info('状态初始化成功。');
       } catch (storageError) {
-        logger.warn(`Attempt ${i + 1} to put state failed`, undefined, storageError as Error);
+        logger.warn(`尝试 ${i + 1} 写入状态失败`, undefined, storageError as Error);
         if (i < 2) await new Promise(res => setTimeout(res, 200 * (i + 1))); // Exponential backoff
       }
     }
 
     if (!putSuccess) {
-      logger.error('Failed to put initial state after retries. DO may be unstable.');
+      logger.error('重试后无法写入初始状态。DO 可能不稳定。');
       throw new Error('Failed to persist initial DO state.');
     }
 
@@ -199,7 +199,7 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
         .set({ do_initialized_at: new Date() })
         .where(eq($data_sources.id, dataSourceData.id));
     } catch (dbError) {
-      logger.error('Failed to update data source do_initialized_at', undefined, dbError as Error);
+      logger.error('无法更新数据源 do_initialized_at', dbError as Error);
       throw new Error(
         `Failed to update data source initialization status: ${dbError instanceof Error ? dbError.message : String(dbError)}`
       );
@@ -208,9 +208,9 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
     try {
       // Only set alarm if state was successfully stored
       await this.ctx.storage.setAlarm(Date.now() + 5000);
-      logger.info('Initial alarm set.');
+      logger.info('初始 Alarm 已设置。');
     } catch (alarmError) {
-      logger.error('Failed to set initial alarm', undefined, alarmError as Error);
+      logger.error('无法设置初始 Alarm', alarmError as Error);
       throw new Error(
         `Failed to set initial alarm: ${alarmError instanceof Error ? alarmError.message : String(alarmError)}`
       );
@@ -267,7 +267,7 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
       );
 
       if (dbConfigResult.isErr()) {
-        configCheckLogger.error('查询数据库配置失败', undefined, dbConfigResult.error);
+        configCheckLogger.error('查询数据库配置失败', dbConfigResult.error);
         return;
       }
 
@@ -289,9 +289,8 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
 
         const newParsedConfig = DataSourceConfigWrapper.safeParse(dbConfig.config);
         if (!newParsedConfig.success) {
-          configCheckLogger.error('Failed to parse new RSS config', {
+          configCheckLogger.error('解析新 RSS 配置失败', newParsedConfig.error, {
             config: dbConfig.config,
-            error: newParsedConfig.error,
           });
           return;
         }
@@ -305,9 +304,9 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
 
         // Persist the updated state
         await this.ctx.storage.put('state', currentState);
-        configCheckLogger.info('State updated with new config');
+        configCheckLogger.info('状态已更新为新配置');
       } else {
-        configCheckLogger.debug('Config version hash unchanged, proceeding with current config');
+        configCheckLogger.debug('配置版本哈希未变，继续使用当前配置');
       }
 
       const interval = tierIntervals[scrapeFrequencyTier as keyof typeof tierIntervals] || DEFAULT_INTERVAL;
@@ -317,22 +316,22 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
       // the process will attempt again later according to its schedule.
       const nextScheduledAlarmTime = Date.now() + interval;
       await this.ctx.storage.setAlarm(nextScheduledAlarmTime);
-      alarmLogger.info('Next regular alarm scheduled', { next_alarm: new Date(nextScheduledAlarmTime).toISOString() });
+      alarmLogger.info('已调度下一次常规 Alarm', { next_alarm: new Date(nextScheduledAlarmTime).toISOString() });
 
       // 3. Dispatcher logic based on source type
       if (currentState.sourceType === 'RSS') {
         await this._fetchAndProcessRss(currentState, alarmLogger);
       } else {
-        alarmLogger.error('不支持的数据源类型', { sourceType: currentState.sourceType });
+        alarmLogger.error('不支持的数据源类型', undefined, { sourceType: currentState.sourceType });
         return;
       }
     } catch (error) {
       // Use the latest available logger instance (might be base or detailed)
       const errorLogger = alarmLogger || this.logger;
       errorLogger.error(
-        'Alarm处理程序发生未捕获异常',
-        { error_name: error instanceof Error ? error.name : 'UnknownError' },
-        error instanceof Error ? error : new Error(String(error)) // Log the error object/stack
+        'Alarm 处理程序发生未捕获异常',
+        error instanceof Error ? error : new Error(String(error)), // Log the error object/stack
+        { error_name: error instanceof Error ? error.name : 'UnknownError' }
       );
     }
   }
@@ -400,9 +399,9 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
           .update($data_sources)
           .set({ name: feedTitle })
           .where(eq($data_sources.id, dataSourceId));
-        nameUpdateLogger.info('Updated source name from feed');
+        nameUpdateLogger.info('根据 Feed 更新了源名称');
       } catch (e) {
-        nameUpdateLogger.warn('Failed to update source name', { error: e });
+        nameUpdateLogger.warn('更新源名称失败', undefined, e as Error);
       }
     }
 
@@ -427,12 +426,12 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
             contentType: 'application/json',
           },
         });
-        r2Logger.debug('Stored raw RSS item in R2', { r2_key: r2Key, item_id: itemIdFromSource });
+        r2Logger.debug('已将原始 RSS 条目存储到 R2', { r2_key: r2Key, item_id: itemIdFromSource });
       } catch (r2Error) {
         r2Logger.error(
-          'Failed to store raw RSS item in R2',
-          { r2_key: r2Key, item_id: itemIdFromSource },
-          r2Error as Error
+          '存储原始 RSS 条目到 R2 失败',
+          r2Error as Error,
+          { r2_key: r2Key, item_id: itemIdFromSource }
         );
         // Continue processing even if R2 storage fails
       }
@@ -454,12 +453,12 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
     }
 
     if (articlesToInsert.length === 0) {
-      logger.info('No articles found in feed');
+      logger.info('Feed 中未找到文章');
 
       // Successfully processed, update lastChecked
       const updatedState = { ...state, lastChecked: now };
       await this.ctx.storage.put('state', updatedState);
-      logger.info('Updated lastChecked', { timestamp: new Date(now).toISOString() });
+      logger.info('更新了 lastChecked', { timestamp: new Date(now).toISOString() });
 
       // Update data source lastChecked in database with retries
       const sourceUpdateLogger = logger.child({ step: 'Source Update' });
@@ -478,14 +477,14 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
       );
 
       if (sourceUpdateResult.isErr()) {
-        sourceUpdateLogger.error('Failed to update data source lastChecked after all retries');
+        sourceUpdateLogger.error('重试后更新数据源 lastChecked 失败', sourceUpdateResult.error);
         return;
       }
-      sourceUpdateLogger.info('Updated data source lastChecked in database');
+      sourceUpdateLogger.info('已更新数据库中的数据源 lastChecked');
       return;
     }
 
-    logger.info('Processed articles from feed', {
+    logger.info('已处理 Feed 中的文章', {
       total_articles: articlesToInsert.length,
     });
 
@@ -511,7 +510,7 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
     }
 
     const insertedRows = insertResult.value; // Type: { insertedId: number, itemId: string }[]
-    dbLogger.info('DB Insert completed', { affected_rows: insertedRows.length });
+    dbLogger.info('数据库插入完成', { affected_rows: insertedRows.length });
 
     // 4. Retrieve IDs of newly inserted items (onConflictDoNothing means only new items are returned)
     const newlyInsertedIds = insertedRows.map(row => row.insertedId);
@@ -520,19 +519,19 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
     if (newlyInsertedIds.length > 0 && this.env.ARTICLE_PROCESSING_QUEUE) {
       const BATCH_SIZE_LIMIT = 100; // Adjust as needed
 
-      const queueLogger = logger.child({ step: 'Queue', total_ids_to_queue: newlyInsertedIds.length });
-      queueLogger.info('Sending newly inserted item IDs to queue');
+      const queueLogger = logger.child({ step: '队列处理', total_ids_to_queue: newlyInsertedIds.length });
+      queueLogger.info('正在发送新插入的项目 ID 到队列');
 
       for (let i = 0; i < newlyInsertedIds.length; i += BATCH_SIZE_LIMIT) {
         const batch = newlyInsertedIds.slice(i, i + BATCH_SIZE_LIMIT);
-        queueLogger.debug('Sending batch to queue', { batch_size: batch.length, batch_index: i / BATCH_SIZE_LIMIT });
+        queueLogger.debug('发送批次到队列', { batch_size: batch.length, batch_index: i / BATCH_SIZE_LIMIT });
 
         this.ctx.waitUntil(
           this.env.ARTICLE_PROCESSING_QUEUE.send({ ingested_item_ids: batch }).catch(queueError => {
             queueLogger.error(
-              'Failed to send batch to queue',
-              { batch_index: i / BATCH_SIZE_LIMIT, batch_size: batch.length },
-              queueError instanceof Error ? queueError : new Error(String(queueError))
+              '发送批次到队列失败',
+              queueError instanceof Error ? queueError : new Error(String(queueError)),
+              { batch_index: i / BATCH_SIZE_LIMIT, batch_size: batch.length }
             );
           })
         );
@@ -540,10 +539,10 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
     }
 
     // --- Final Step: Update lastChecked only on full success ---
-    logger.info('All steps successful. Updating lastChecked');
+    logger.info('所有步骤成功。更新 lastChecked');
     const updatedState = { ...state, lastChecked: now };
     await this.ctx.storage.put('state', updatedState);
-    logger.info('Updated lastChecked', { timestamp: new Date(now).toISOString() });
+    logger.info('已更新 lastChecked', { timestamp: new Date(now).toISOString() });
 
     // Update data source lastChecked in database with retries
     const sourceUpdateLogger = logger.child({ step: 'Source Update' });
@@ -562,10 +561,10 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
     );
 
     if (sourceUpdateResult.isErr()) {
-      sourceUpdateLogger.error('Failed to update data source lastChecked after all retries');
+      sourceUpdateLogger.error('重试后更新数据源 lastChecked 失败');
       return;
     }
-    sourceUpdateLogger.info('Updated data source lastChecked in database');
+    sourceUpdateLogger.info('已更新数据库中的数据源 lastChecked');
   }
 
   /**
@@ -583,16 +582,16 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const fetchLogger = this.logger.child({ operation: 'fetch', method: request.method, path: url.pathname });
-    fetchLogger.info('Received fetch request');
+    fetchLogger.info('收到 fetch 请求');
 
     if (url.pathname === '/trigger') {
-      fetchLogger.info('Manual trigger received');
+      fetchLogger.info('收到手动触发请求');
       await this.ctx.storage.setAlarm(Date.now()); // Trigger alarm soon
       return new Response('Alarm set');
     }
 
     if (url.pathname === '/status') {
-      fetchLogger.info('Status request received');
+      fetchLogger.info('收到状态请求');
       const state = await this.ctx.storage.get('state');
       const alarm = await this.ctx.storage.getAlarm();
       return Response.json({
@@ -601,68 +600,58 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
       });
     }
 
-    if (url.pathname === '/delete' && request.method === 'DELETE') {
-      fetchLogger.info('Delete request received');
-      try {
-        await this.destroy();
-        fetchLogger.info('DO successfully destroyed');
-        return new Response('Deleted', { status: 200 });
-      } catch (error) {
-        fetchLogger.error('Failed to destroy DO', undefined, error instanceof Error ? error : new Error(String(error)));
-        return new Response(`Failed to delete: ${error instanceof Error ? error.message : String(error)}`, {
-          status: 500,
-        });
+    try {
+      if (url.pathname === '/delete' && request.method === 'DELETE') {
+        fetchLogger.info('收到删除请求');
+        try {
+          await this.destroy();
+          fetchLogger.info('DO 已成功销毁');
+          return new Response('Deleted', { status: 200 });
+        } catch (error) {
+          fetchLogger.error(
+            '销毁 DO 失败',
+            error instanceof Error ? error : new Error(String(error))
+          );
+          return new Response(`删除失败: ${error instanceof Error ? error.message : String(error)}`, {
+            status: 500,
+          });
+        }
       }
-    } else if (url.pathname === '/initialize' && request.method === 'POST') {
-      fetchLogger.info('Initialize request received');
-      const dataSourceDataResult = await tryCatchAsync(
-        request.json<{
-          id: number;
-          source_type: string;
-          config: unknown;
-          config_version_hash: string | null;
-          scrape_frequency_tier: number;
-        }>()
+
+      if (url.pathname === '/initialize' && request.method === 'POST') {
+        fetchLogger.info('收到初始化请求');
+        try {
+          const body = (await request.json()) as any;
+          if (!body || !body.id || !body.source_type) {
+            fetchLogger.error('收到无效的数据源格式', undefined, { body });
+            return new Response('无效的数据源格式', { status: 400 });
+          }
+
+          // Use the internal initialize method which handles logic
+          await this.initialize(body);
+
+          fetchLogger.info('通过 API 初始化成功');
+          return new Response('Initialized', { status: 200 });
+        } catch (error) {
+          fetchLogger.error(
+            '通过 fetch 初始化失败',
+            error instanceof Error ? error : new Error(String(error))
+          );
+          return new Response(`初始化失败: ${error instanceof Error ? error.message : String(error)}`, {
+            status: 500,
+          });
+        }
+      }
+
+      fetchLogger.warn('路径未找到', { pathname: url.pathname });
+      return new Response('Not Found', { status: 404 });
+    } catch (error) {
+      fetchLogger.error(
+        '初始化失败',
+        error instanceof Error ? error : new Error(String(error))
       );
-      if (dataSourceDataResult.isErr()) {
-        const error =
-          dataSourceDataResult.error instanceof Error
-            ? dataSourceDataResult.error
-            : new Error(String(dataSourceDataResult.error));
-
-        fetchLogger.error('Initialization failed via fetch', undefined, error);
-        return new Response(`Initialization failed: ${error.message}`, { status: 500 });
-      }
-
-      const dataSourceData = dataSourceDataResult.value;
-      if (
-        !dataSourceData ||
-        typeof dataSourceData.id !== 'number' ||
-        typeof dataSourceData.source_type !== 'string' ||
-        typeof dataSourceData.scrape_frequency_tier !== 'number'
-      ) {
-        fetchLogger.warn('Invalid data source data format received', { received_data: dataSourceData });
-        return new Response('Invalid data source data format', { status: 400 });
-      }
-
-      try {
-        await this.initialize(dataSourceData);
-        fetchLogger.info('Initialization successful via API');
-        return new Response('Initialized');
-      } catch (error) {
-        fetchLogger.error(
-          'Initialization failed',
-          undefined,
-          error instanceof Error ? error : new Error(String(error))
-        );
-        return new Response(`Initialization failed: ${error instanceof Error ? error.message : String(error)}`, {
-          status: 500,
-        });
-      }
+      return new Response(`Initialization failed: ${error}`, { status: 500 });
     }
-
-    fetchLogger.warn('Path not found');
-    return new Response('Not found', { status: 404 });
   }
 
   /**
@@ -670,7 +659,7 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
    * Removes all stored state
    */
   async destroy() {
-    this.logger.info('Destroy called, deleting storage');
+    this.logger.info('调用 Destroy，正在删除存储');
     const state = await this.ctx.storage.get<DataSourceState>('state');
     if (state?.dataSourceId) {
       // Clear the do_initialized_at field when DO is destroyed
@@ -680,6 +669,6 @@ export class DataSourceIngestorDO extends DurableObject<Env> {
         .where(eq($data_sources.id, state.dataSourceId));
     }
     await this.ctx.storage.deleteAll();
-    this.logger.info('Storage deleted');
+    this.logger.info('存储已删除');
   }
 }

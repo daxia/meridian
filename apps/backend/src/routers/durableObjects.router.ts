@@ -63,7 +63,7 @@ const route = new Hono<HonoEnv>()
 
       if (sourceResult.isErr()) {
         const error = sourceResult.error instanceof Error ? sourceResult.error : new Error(String(sourceResult.error));
-        initLogger.error('Failed to fetch source', { sourceId }, error);
+        initLogger.error('获取数据源失败', error, { sourceId });
         return c.json({ error: 'Failed to fetch source' }, 500);
       }
 
@@ -87,11 +87,11 @@ const route = new Hono<HonoEnv>()
       );
       if (initResult.isErr()) {
         const error = initResult.error instanceof Error ? initResult.error : new Error(String(initResult.error));
-        initLogger.error('Failed to initialize source DO', { sourceId, url: source.config.config.url }, error);
+        initLogger.error('初始化数据源 DO 失败', error, { sourceId, url: source.config.config.url });
         return c.json({ error: 'Failed to initialize source DO' }, 500);
       }
 
-      initLogger.info('Successfully initialized source DO', { sourceId, url: source.config.config.url });
+      initLogger.info('成功初始化数据源 DO', { sourceId, url: source.config.config.url });
       return c.json({ success: true });
     }
   )
@@ -123,7 +123,7 @@ const route = new Hono<HonoEnv>()
 
       if (sourceResult.isErr()) {
         const error = sourceResult.error instanceof Error ? sourceResult.error : new Error(String(sourceResult.error));
-        triggerLogger.error('Failed to fetch source', { sourceId }, error);
+        triggerLogger.error('获取数据源失败', error, { sourceId });
         return c.json({ error: 'Failed to fetch source' }, 500);
       }
 
@@ -143,11 +143,11 @@ const route = new Hono<HonoEnv>()
 
       if (triggerResult.isErr()) {
         const error = triggerResult.error instanceof Error ? triggerResult.error : new Error(String(triggerResult.error));
-        triggerLogger.error('Failed to trigger source DO', { sourceId, url: source.config.config.url }, error);
+        triggerLogger.error('触发数据源 DO 失败', error, { sourceId, url: source.config.config.url });
         return c.json({ error: 'Failed to trigger source DO' }, 500);
       }
 
-      triggerLogger.info('Successfully triggered source DO', { sourceId, url: source.config.config.url });
+      triggerLogger.info('成功触发数据源 DO', { sourceId, url: source.config.config.url });
       return c.json({ success: true });
     }
   )
@@ -158,13 +158,13 @@ const route = new Hono<HonoEnv>()
     }
 
     const initLogger = logger.child({ operation: 'initialize-dos' });
-    initLogger.info('Initializing SourceScraperDOs from database');
+    initLogger.info('正在从数据库初始化 SourceScraperDOs');
 
     const db = getDb(c.env.HYPERDRIVE);
 
     // Get batch size from query params, default to 100
     const batchSize = Number(c.req.query('batchSize')) || 100;
-    initLogger.info('Using batch size', { batchSize });
+    initLogger.info('使用批处理大小', { batchSize });
 
     const allSourcesResult = await tryCatchAsync(
       db
@@ -181,12 +181,12 @@ const route = new Hono<HonoEnv>()
       const error =
         allSourcesResult.error instanceof Error ? allSourcesResult.error : new Error(String(allSourcesResult.error));
       console.error('Failed to fetch sources from database:', error);
-      initLogger.error('Failed to fetch sources from database', { errorMessage: error.message, stack: error.stack });
+      initLogger.error('从数据库获取数据源失败', error);
       return c.json({ error: 'Failed to fetch sources from database', details: error.message }, 500);
     }
 
     const allSources = allSourcesResult.value;
-    initLogger.info('Sources fetched from database', { source_count: allSources.length });
+    initLogger.info('已从数据库获取数据源', { source_count: allSources.length });
 
     // Process sources in batches
     let processedCount = 0;
@@ -201,7 +201,7 @@ const route = new Hono<HonoEnv>()
     // Process each batch sequentially
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex];
-      initLogger.info('Processing batch', { batchIndex: batchIndex + 1, batchSize: batch.length });
+      initLogger.info('正在处理批次', { batchIndex: batchIndex + 1, batchSize: batch.length });
 
       const batchResults = await Promise.all(
         batch.map(async source => {
@@ -209,15 +209,15 @@ const route = new Hono<HonoEnv>()
           const doId = c.env.DATA_SOURCE_INGESTOR.idFromName(source.config.config.url);
           const stub = c.env.DATA_SOURCE_INGESTOR.get(doId);
 
-          sourceLogger.debug('Initializing DO');
+          sourceLogger.debug('正在初始化 DO');
           const result = await tryCatchAsync(stub.initialize(source));
           if (result.isErr()) {
             const error = result.error instanceof Error ? result.error : new Error(String(result.error));
-            sourceLogger.error('Failed to initialize DO', undefined, error);
+            sourceLogger.error('初始化 DO 失败', error);
             return false;
           }
 
-          sourceLogger.debug('Successfully initialized DO');
+          sourceLogger.debug('DO 初始化成功');
           return true;
         })
       );
@@ -225,7 +225,7 @@ const route = new Hono<HonoEnv>()
       processedCount += batch.length;
       successCount += batchResults.filter(success => success).length;
 
-      initLogger.info('Batch completed', {
+      initLogger.info('批次处理完成', {
         batchIndex: batchIndex + 1,
         batchSuccessful: batchResults.filter(success => success).length,
         totalProcessed: processedCount,
@@ -233,7 +233,7 @@ const route = new Hono<HonoEnv>()
       });
     }
 
-    initLogger.info('Initialization process complete', { total: allSources.length, successful: successCount });
+    initLogger.info('初始化流程完成', { total: allSources.length, successful: successCount });
     return c.json({ initialized: successCount, total: allSources.length });
   })
   .delete(
@@ -264,7 +264,7 @@ const route = new Hono<HonoEnv>()
 
       if (sourceResult.isErr()) {
         const error = sourceResult.error instanceof Error ? sourceResult.error : new Error(String(sourceResult.error));
-        deleteLogger.error('Failed to fetch source', { sourceId }, error);
+        deleteLogger.error('获取数据源失败', error, { sourceId });
         return c.json({ error: 'Failed to fetch source' }, 500);
       }
 
@@ -284,7 +284,7 @@ const route = new Hono<HonoEnv>()
       );
       if (deleteResult.isErr()) {
         const error = deleteResult.error instanceof Error ? deleteResult.error : new Error(String(deleteResult.error));
-        deleteLogger.error('Failed to delete source DO', { sourceId, url: source.config.config.url }, error);
+        deleteLogger.error('删除数据源 DO 失败', error, { sourceId, url: source.config.config.url });
         return c.json({ error: 'Failed to delete source DO' }, 500);
       }
 
@@ -296,7 +296,7 @@ const route = new Hono<HonoEnv>()
       if (articlesResult.isErr()) {
         const error =
           articlesResult.error instanceof Error ? articlesResult.error : new Error(String(articlesResult.error));
-        deleteLogger.error('Failed to delete articles', { sourceId }, error);
+        deleteLogger.error('删除文章失败', error, { sourceId });
         return c.json({ error: 'Failed to delete articles' }, 500);
       }
 
@@ -306,11 +306,11 @@ const route = new Hono<HonoEnv>()
       if (dbDeleteResult.isErr()) {
         const error =
           dbDeleteResult.error instanceof Error ? dbDeleteResult.error : new Error(String(dbDeleteResult.error));
-        deleteLogger.error('Failed to delete source from database', { sourceId }, error);
+        deleteLogger.error('从数据库删除数据源失败', error, { sourceId });
         return c.json({ error: 'Failed to delete source from database' }, 500);
       }
 
-      deleteLogger.info('Successfully deleted source', { sourceId, url: source.config.config.url });
+      deleteLogger.info('成功删除数据源', { sourceId, url: source.config.config.url });
       return c.json({ success: true });
     }
   );

@@ -56,7 +56,7 @@ export class DomainRateLimiter<T extends BatchItem<I>, I = number | string> {
     processItem: (item: T, domain: string) => Promise<R>
   ): Promise<R[]> {
     const batchLogger = this.logger.child({ batch_size: items.length });
-    batchLogger.info('Starting batch processing');
+    batchLogger.info('开始批处理');
 
     const results: R[] = [];
     const remainingItems = [...items];
@@ -101,12 +101,12 @@ export class DomainRateLimiter<T extends BatchItem<I>, I = number | string> {
             })
             .filter(time => time > 0) // Only consider positive wait times
         );
-        batchLogger.debug('Waiting for domain cooldown', { wait_time_ms: Math.max(500, nextReady) });
-        await step.sleep(`waiting for domain cooldown (${Math.round(nextReady / 1000)}s)`, Math.max(500, nextReady));
+        batchLogger.debug('等待域名冷却', { wait_time_ms: Math.max(500, nextReady) });
+        await step.sleep(`等待域名冷却 (${Math.round(nextReady / 1000)}s)`, Math.max(500, nextReady));
         continue;
       }
 
-      batchLogger.debug('Processing batch', { batch_size: currentBatch.length, remaining: remainingItems.length });
+      batchLogger.debug('正在处理批次', { batch_size: currentBatch.length, remaining: remainingItems.length });
 
       // Process current batch in parallel
       const batchResults = await Promise.allSettled(
@@ -118,8 +118,7 @@ export class DomainRateLimiter<T extends BatchItem<I>, I = number | string> {
           } catch (error) {
             const itemLogger = batchLogger.child({ item_id: item.id });
             itemLogger.error(
-              'Error processing item',
-              undefined,
+              '处理项目时发生错误',
               error instanceof Error ? error : new Error(String(error))
             );
             throw error;
@@ -136,15 +135,15 @@ export class DomainRateLimiter<T extends BatchItem<I>, I = number | string> {
 
       // Apply global cooldown between batches if we have more items to process
       if (remainingItems.length > 0) {
-        batchLogger.debug('Applying global rate limit', { cooldown_ms: this.options.globalCooldownMs });
+        batchLogger.debug('应用全局速率限制', { cooldown_ms: this.options.globalCooldownMs });
         await step.sleep(
-          `global rate limit (${Math.round(this.options.globalCooldownMs / 1000)}s)`,
+          `全局速率限制 (${Math.round(this.options.globalCooldownMs / 1000)}s)`,
           this.options.globalCooldownMs
         );
       }
     }
 
-    batchLogger.info('Batch processing complete', { processed_count: results.length });
+    batchLogger.info('批处理完成', { processed_count: results.length });
     return results;
   }
 }

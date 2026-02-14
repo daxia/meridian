@@ -36,11 +36,12 @@
 
     /* Skip type checking all .d.ts files. */
     "skipLibCheck": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
     "types": ["node", "@cloudflare/workers-types"],
     "paths": {
-      "@meridian/logger": ["../../packages/logger/src/index.ts"]
+      "@meridian/logger": ["../../packages/logger/src/index.ts"],
+      "@meridian/database": ["../../packages/database/src/index.ts"]
     }
-  }
+  },
+  "include": ["src/**/*", "test/**/*", "env.d.ts", "worker-configuration.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }

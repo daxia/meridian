@@ -38,22 +38,22 @@ export default {
   fetch: app.fetch,
   async queue(batch: MessageBatch<unknown>, env: Env): Promise<void> {
     const batchLogger = queueLogger.child({ batch_size: batch.messages.length });
-    batchLogger.info('Received batch of articles to process');
+    batchLogger.info('收到一批待处理的文章');
 
     const articlesToProcess: number[] = [];
     for (const message of batch.messages) {
       const { ingested_item_ids } = message.body as ProcessArticlesParams;
-      batchLogger.debug('Processing message', { message_id: message.id, article_count: ingested_item_ids.length });
+      batchLogger.debug('正在处理消息', { message_id: message.id, article_count: ingested_item_ids.length });
 
       for (const id of ingested_item_ids) {
         articlesToProcess.push(id);
       }
     }
 
-    batchLogger.info('Articles extracted from batch', { total_articles: articlesToProcess.length });
+    batchLogger.info('从批次中提取文章', { total_articles: articlesToProcess.length });
 
     if (articlesToProcess.length === 0) {
-      batchLogger.info('Queue batch was empty, nothing to process');
+      batchLogger.info('队列批次为空，无内容处理');
       batch.ackAll(); // Acknowledge the empty batch
       return;
     }
@@ -65,7 +65,7 @@ export default {
       articleChunks.push(articlesToProcess.slice(i, i + CHUNK_SIZE));
     }
 
-    batchLogger.info('Split articles into chunks', { chunk_count: articleChunks.length });
+    batchLogger.info('文章分块完成', { chunk_count: articleChunks.length });
 
     // Process each chunk sequentially
     for (const chunk of articleChunks) {
@@ -73,8 +73,8 @@ export default {
       if (workflowResult.isErr()) {
         queueLogger.error(
           '触发文章处理工作流失败',
-          { error_message: workflowResult.error.message, chunk_size: chunk.length },
-          workflowResult.error
+          workflowResult.error,
+          { error_message: workflowResult.error.message, chunk_size: chunk.length }
         );
         // Retry the entire batch if Workflow creation failed
         batch.retryAll({ delaySeconds: 30 }); // Retry after 30 seconds
