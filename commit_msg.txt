@@ -1,4 +1,4 @@
-docs: 更新提示词记录与 Req 7 状态
+fix: 修复 TS 编译错误
 
-- 记录最新的对话摘要与提示词历史。
-- 标记 Req 7 (情报汇总) 为已完成。
+- 移除 `generateBrief.workflow.ts` 中不存在的 `IngestedItem` 类型导入。
+- 修复 `index.ts` 中 `ScheduledEvent.cron` 属性访问的类型问题 (使用类型断言)。

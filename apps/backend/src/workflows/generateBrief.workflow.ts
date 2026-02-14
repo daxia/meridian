@@ -1,5 +1,5 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep, type WorkflowStepConfig } from 'cloudflare:workers';
-import { $ingested_items, $reports, and, eq, gte, isNotNull, type IngestedItem } from '@meridian/database';
+import { $ingested_items, $reports, and, eq, gte, isNotNull } from '@meridian/database';
 import { Logger } from '@meridian/logger';
 import { getDb } from '../lib/utils';
 import type { Env } from '../index';

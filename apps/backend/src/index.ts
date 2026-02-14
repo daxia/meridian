@@ -95,7 +95,7 @@ export default {
     const logger = new Logger({ service: 'source-monitor' });
 
     // Handle Cron Triggers
-    if (event.cron === '0 6,18 * * *') { // 6 AM and 6 PM
+    if ((event as any).cron === '0 6,18 * * *') { // 6 AM and 6 PM
         logger.info('Triggering Scheduled Intelligence Brief Generation');
         await env.GENERATE_BRIEF_WORKFLOW.create({
             id: `brief-${new Date().toISOString()}`,
