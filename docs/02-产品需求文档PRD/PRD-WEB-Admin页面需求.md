@@ -6,6 +6,7 @@ related_requirement:
   - 20260214001
   - 20260214005
   - 20260214006
+  - 20260214011
 created: 2026-02-14
 updated: 2026-02-14
 ---
@@ -20,15 +21,19 @@ updated: 2026-02-14
 ## 1. 引言
 
 ### 1.1 背景
-Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。近期发现存在数据显示异常（NaN/N/A）、关键运维字段缺失（Last/Next Fetch）以及调度器未初始化导致抓取停滞的问题。
+Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。近期发现存在数据显示异常（NaN/N/A）、关键运维字段缺失（Last/Next Fetch）以及调度器未初始化导致抓取停滞的问题。此外，为了方便管理员在非定时任务时间点生成情报简报，需要增加手动触发功能。
 
 ### 1.2 目标
-修复显示错误，增强调度可观测性，并提供手动修复调度状态的工具，确保系统稳定运行。
+修复显示错误，增强调度可观测性，并提供手动修复调度状态和触发情报汇总的工具，确保系统稳定运行且易于管理。
 
 ---
 
 ## 2. 变更记录
 
+- **2026-02-14**:
+    - **需求编号**: 20260214011
+    - **内容**: 新增 "生成情报简报" 按钮。
+    - **目标**: 允许管理员手动触发情报汇总。
 - **2026-02-14**:
     - **需求编号**: 20260214006
     - **内容**: 新增 "初始化调度器" 按钮。
@@ -164,3 +169,36 @@ Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。近期发现
 2.  点击按钮后，网络请求成功 (200 OK)。
 3.  后端日志显示 "Initializing DO for source: [ID]"。
 4.  操作完成后，之前 "Next Fetch" 过期但不执行的源，应在短时间内（如 1 分钟内）开始执行抓取。
+
+---
+
+## 需求4：Admin 手动触发情报汇总 (待实现)
+
+**需求编号**: 20260214011
+
+**DD编号**: DD-WEB-Admin页面需求
+
+### 1. 需求功能点
+
+**1）情报汇总按钮**:
+
+- **描述**: 在 Admin 面板提供一个手动触发全量情报汇总（Intelligence Briefing）的入口。
+- **UI/UX 交互**:
+    - 在 Source Analytics 表格上方或页面顶部的 Action Bar，新增一个 Secondary Button (或带有图标的 Button)，文案为 "Generate Intelligence Brief"。
+    - 点击后显示 Loading 状态。
+    - 成功后显示 Toast: "Intelligence Briefing triggered successfully"。
+- **详细规则**:
+    - 调用 API: `POST /api/admin/briefs/trigger`。
+
+**2）后端触发接口**:
+
+- **描述**: 提供 API 用于立即启动 `GENERATE_BRIEF_WORKFLOW`。
+- **详细规则**:
+    - 路径: `POST /api/admin/briefs/trigger`。
+    - 逻辑: 调用 `env.GENERATE_BRIEF_WORKFLOW.create({ params: { force: true } })`。
+
+### 2. 验收标准
+
+1.  Admin 页面可见 "Generate Intelligence Brief" 按钮。
+2.  点击后后端日志显示 "Starting Intelligence Brief Generation"。
+3.  Workflow 正常启动并执行聚类与汇总流程。

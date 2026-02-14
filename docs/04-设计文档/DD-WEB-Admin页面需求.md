@@ -11,10 +11,11 @@ updated: 2026-02-14
 
 ## 1. 概述
 
-本设计文档旨在解决 Admin Panel "Source Analytics" 列表中的数据显示异常问题，包括日期格式化错误 (NaN)、统计比率错误 (N/A%) 以及源名称缺失 (Unknown)。修复方案涉及前端展示逻辑增强与后端数据源名称自动补全。
+本设计文档旨在解决 Admin Panel "Source Analytics" 列表中的数据显示异常问题，包括日期格式化错误 (NaN)、统计比率错误 (N/A%) 以及源名称缺失 (Unknown)。修复方案涉及前端展示逻辑增强与后端数据源名称自动补全。此外，还包括了调度器初始化与手动触发情报汇总的设计。
 
 ## 2. 变更记录
 
+- **2026-02-14**: [20260214011] 新增手动触发情报汇总功能设计。
 - **2026-02-14**: [20260214006] 新增调度器初始化功能设计。
 - **2026-02-14**: [20260214005] 新增抓取时间列设计。
 - **2026-02-14**: [20260214001] 完成数据修复设计与实现。
@@ -327,3 +328,68 @@ sequenceDiagram
 1.  **日志验证**: 点击按钮后，观察后端日志是否出现 `[DataSourceIngestorDO] Initializing...`。
 2.  **Alarm 验证**: 使用 `wrangler` 或日志确认 Alarm 已设置。
 3.  **功能验证**: 确认 "Next Fetch" 过期的源在初始化后 1-2 分钟内开始抓取（Last Fetch 更新）。
+
+---
+
+## PRD-需求4：Admin 手动触发情报汇总 (待实现)
+
+### 概述
+
+在 Admin Panel 增加手动触发全量情报汇总（Intelligence Briefing）的功能，允许管理员在非定时任务时间点（如调试、演示或紧急生成报告时）生成最新的简报。
+
+### 目标与约束
+
+- **目标**: 提供灵活的情报生成控制能力。
+- **约束**:
+    - 操作耗时较长（Workflow 异步执行），前端仅需确认触发成功，无需等待生成结果。
+    - 仅管理员可执行。
+
+### 功能设计
+
+#### 1. 后端 API 设计 (Backend)
+
+- **API**: `POST /admin/briefs/trigger` (Backend Hono)
+- **API (Nuxt Proxy)**: `POST /api/admin/briefs/trigger` (Frontend Server)
+- **逻辑**:
+    1.  接收请求。
+    2.  调用 `env.GENERATE_BRIEF_WORKFLOW.create({ params: { force: true } })`。
+    3.  返回成功响应。
+
+#### 2. 前端交互设计 (Frontend)
+
+- **位置**: `apps/frontend/src/pages/admin/index.vue` -> 顶部或表格上方工具栏。
+- **组件**: `<UButton label="Generate Intelligence Brief" variant="soft" :loading="generatingBrief" @click="generateBrief" />`
+- **反馈**:
+    - **Success**: Toast "Brief generation triggered".
+    - **Error**: Toast "Failed to trigger".
+
+### 详细设计
+
+#### 类图/数据流
+
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant Frontend
+    participant BackendAPI
+    participant Workflow as GenerateBriefWorkflow
+
+    Admin->>Frontend: Click "Generate Brief"
+    Frontend->>BackendAPI: POST /api/admin/briefs/trigger
+    BackendAPI->>Workflow: create({ force: true })
+    BackendAPI-->>Frontend: { success: true }
+    Frontend->>Admin: Show Toast
+    
+    Workflow->>Workflow: Run Logic (Async)
+```
+
+### 变更清单
+
+1.  `apps/backend/src/routers/admin.router.ts`: 新增 `/briefs/trigger` 路由。
+2.  `apps/frontend/src/server/api/admin/briefs/trigger.post.ts`: 新增 Nuxt Server API 代理。
+3.  `apps/frontend/src/pages/admin/index.vue`: 新增按钮与调用逻辑。
+
+### 测试与验证要点
+
+1.  **触发验证**: 点击按钮后，后端日志显示 "Starting Intelligence Brief Generation"。
+2.  **结果验证**: 稍后检查数据库或日志，确认新的 Report 生成。

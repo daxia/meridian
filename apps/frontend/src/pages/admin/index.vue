@@ -167,6 +167,25 @@ async function addSource() {
 }
 
 const isInitializing = ref(false);
+const isGeneratingBrief = ref(false);
+
+async function generateBrief() {
+  if (!confirm('This will trigger a full intelligence briefing generation. Continue?')) return;
+  
+  if (isGeneratingBrief.value) return;
+  isGeneratingBrief.value = true;
+  try {
+    await $fetch('/api/admin/briefs/trigger', {
+      method: 'POST',
+    });
+    alert('Intelligence briefing triggered successfully.');
+  } catch (error) {
+    console.error('Failed to trigger briefing', error);
+    alert('Failed to trigger briefing');
+  } finally {
+    isGeneratingBrief.value = false;
+  }
+}
 
 async function initializeSchedulers() {
   if (!confirm('This will force re-initialization of all data source schedulers. Continue?')) return;
@@ -223,6 +242,13 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
 
       <!-- button to add a new source -->
       <div class="flex gap-2">
+        <button
+          class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="isGeneratingBrief"
+          @click="generateBrief"
+        >
+          {{ isGeneratingBrief ? 'Generating...' : 'Generate Briefing' }}
+        </button>
         <button
           class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="isInitializing"

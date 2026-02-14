@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { trimTrailingSlash } from 'hono/trailing-slash';
 import type { Env } from './index';
+import adminRouter from './routers/admin.router';
 import durableObjectsRouter from './routers/durableObjects.router';
 import eventsRouter from './routers/events.router';
 import openGraph from './routers/openGraph.router';
@@ -12,6 +13,7 @@ export type HonoEnv = { Bindings: Env };
 const app = new Hono<HonoEnv>()
   .use(trimTrailingSlash())
   .get('/favicon.ico', async c => c.notFound()) // disable favicon
+  .route('/admin', adminRouter)
   .route('/reports', reportsRouter)
   .route('/sources', sourcesRouter)
   .route('/openGraph', openGraph)
