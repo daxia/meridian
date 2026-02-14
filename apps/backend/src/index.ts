@@ -133,7 +133,7 @@ export default {
         });
       }
     } catch (error) {
-      logger.error('Source monitor failed', { error_message: error instanceof Error ? error.message : String(error) });
+      logger.error('Source monitor failed', undefined, { error_message: error instanceof Error ? error.message : String(error) });
     }
   },
 } satisfies ExportedHandler<Env>;
