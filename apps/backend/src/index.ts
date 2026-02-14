@@ -2,6 +2,7 @@ import app from './app';
 import { DataSourceIngestorDO } from './durable_objects/dataSourceIngestorDO';
 import { Logger } from '@meridian/logger';
 import { type ProcessArticlesParams, startProcessArticleWorkflow } from './workflows/processIngestedItem.workflow';
+import { GenerateBriefWorkflow, type GenerateBriefParams } from './workflows/generateBrief.workflow';
 import { getDb } from './lib/utils';
 import { $data_sources } from '@meridian/database';
 
@@ -11,6 +12,7 @@ export type Env = {
   ARTICLE_PROCESSING_QUEUE: Queue<ProcessArticlesParams>;
   DATA_SOURCE_INGESTOR: DurableObjectNamespace<DataSourceIngestorDO>;
   PROCESS_INGESTED_ITEM: Workflow<ProcessArticlesParams>;
+  GENERATE_BRIEF_WORKFLOW: Workflow<GenerateBriefParams>;
   HYPERDRIVE: Hyperdrive;
 
   // Secrets
@@ -36,7 +38,7 @@ const queueLogger = new Logger({ service: 'article-queue-handler' });
 
 export default {
   fetch: app.fetch,
-  async queue(batch: MessageBatch<unknown>, env: Env): Promise<void> {
+  async queue(batch: MessageBatch<ProcessArticlesParams>, env: Env): Promise<void> {
     const batchLogger = queueLogger.child({ batch_size: batch.messages.length });
     batchLogger.info('收到一批待处理的文章');
 
@@ -91,6 +93,18 @@ export default {
   },
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     const logger = new Logger({ service: 'source-monitor' });
+
+    // Handle Cron Triggers
+    if (event.cron === '0 6,18 * * *') { // 6 AM and 6 PM
+        logger.info('Triggering Scheduled Intelligence Brief Generation');
+        await env.GENERATE_BRIEF_WORKFLOW.create({
+            id: `brief-${new Date().toISOString()}`,
+            params: { hoursLookback: 12 }
+        });
+        return; // Skip source check if it's the brief trigger? Or run both? 
+        // The event object has a 'cron' property matching the trigger.
+    }
+
     // Use the utility function that handles Hyperdrive connection string
     const db = getDb(env.HYPERDRIVE);
 
@@ -126,3 +140,4 @@ export default {
 
 export { DataSourceIngestorDO };
 export { ProcessIngestedItemWorkflow } from './workflows/processIngestedItem.workflow';
+export { GenerateBriefWorkflow } from './workflows/generateBrief.workflow';

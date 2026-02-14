@@ -18,7 +18,7 @@
     },
   ],
   "triggers": {
-    "crons": ["* * * * *"]
+    "crons": ["* * * * *", "0 6,18 * * *"]
   },
   "durable_objects": {
     "bindings": [
@@ -79,8 +79,13 @@
     {
       "name": "meridian_process_ingested_item",
       "binding": "PROCESS_INGESTED_ITEM",
-      "class_name": "ProcessIngestedItemWorkflow",
+      "class_name": "ProcessIngestedItemWorkflow"
     },
+    {
+      "name": "meridian_generate_brief",
+      "binding": "GENERATE_BRIEF_WORKFLOW",
+      "class_name": "GenerateBriefWorkflow"
+    }
   ],
   // !!! NOTE !!! : tail workers make workers with durable objects CRASH for now - 30/04/2025
   // "tail_consumers": [

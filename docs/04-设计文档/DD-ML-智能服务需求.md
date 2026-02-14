@@ -10,22 +10,22 @@
 
 ---
 
-## PRD-需求1：文章聚类接口 (待实现)
+## PRD-需求1：文章聚类接口 (已完成)
 
 #### 需求编号：20260214007
 
 ### 概述
 
-在 FastAPI 服务中新增 `/cluster` 端点，利用 `scikit-learn` 或 `hdbscan` 库实现向量聚类。
+在 FastAPI 服务中新增 `/cluster` 端点，利用 `umap-learn` 和 `hdbscan` 库实现向量聚类。
 
 ### 功能设计
 
-1.  **库选型**: 使用 `sklearn.cluster.DBSCAN` 或 `HDBSCAN`。考虑到依赖体积，优先尝试 `sklearn`。
+1.  **库选型**: 使用 `umap-learn` 进行降维，`hdbscan` 进行密度聚类。
 2.  **数据流**: 
-    - 接收 Request Body (文章 ID + 向量)。
-    - 转换向量为 NumPy Array。
-    - 执行聚类。
-    - 格式化输出。
+    - 接收 Request Body (Embeddings list)。
+    - UMAP 降维至 5 维。
+    - HDBSCAN 聚类。
+    - 返回 Labels。
 
 ### 接口与数据结构
 
@@ -34,20 +34,16 @@
 **Request**:
 ```json
 {
-  "articles": [
-    { "id": 1, "embedding": [0.1, 0.2, ...] },
-    { "id": 2, "embedding": [0.11, 0.21, ...] }
-  ]
+  "embeddings": [[0.1, ...], [0.2, ...]],
+  "min_cluster_size": 5
 }
 ```
 
 **Response**:
 ```json
 {
-  "clusters": [
-    { "cluster_id": 0, "article_ids": [1, 2] },
-    { "cluster_id": -1, "article_ids": [3] } // -1 表示噪声/未聚类
-  ]
+  "labels": [0, 0, 1, -1],
+  "n_clusters": 2
 }
 ```
 

@@ -1,5 +1,5 @@
-feat(sys): 实现日志启动归档功能 (Req 8)
+feat(sys): 完成情报汇总自动化流程 (Req 7)
 
-- 实现 start_all.js 中的 archiveOldLogs 函数。
-- 启动服务前自动将旧日志移至 logs/history/ 目录。
-- 更新相关 PRD/DD 文档状态为已完成。
+- ML Service: 新增 /cluster 接口 (UMAP + HDBSCAN)。
+- Backend: 新增 GenerateBriefWorkflow 工作流，实现定时聚类与日报生成。
+- Docs: 更新 PRD/DD 状态为已完成。

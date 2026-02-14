@@ -8,7 +8,8 @@ from .dependencies import (
     get_embedding_model,
 )  # Import auth dependency
 from .embeddings import compute_embeddings
-from .schemas import EmbeddingRequest, EmbeddingResponse
+from .clustering import compute_clusters
+from .schemas import EmbeddingRequest, EmbeddingResponse, ClusteringRequest, ClusteringResponse
 from .logger import setup_logging
 
 logger = setup_logging()
@@ -58,4 +59,36 @@ async def api_compute_embeddings(
         raise HTTPException(
             status_code=500,
             detail=f"Internal server error during embedding computation: {str(e)}",
+        ) from e
+
+
+@app.post("/cluster", response_model=ClusteringResponse)
+async def api_cluster_embeddings(
+    request: ClusteringRequest,
+    _: None = Depends(verify_token),
+):
+    """
+    Clusters the provided embeddings using UMAP + HDBSCAN.
+    Returns the cluster labels and total number of clusters.
+    """
+    logger.info(f"收到聚类请求，处理 {len(request.embeddings)} 个向量。")
+    try:
+        labels = compute_clusters(
+            embeddings=request.embeddings,
+            min_cluster_size=request.min_cluster_size,
+        )
+        
+        # Count unique clusters (excluding noise -1)
+        unique_clusters = set(labels)
+        if -1 in unique_clusters:
+            unique_clusters.remove(-1)
+        n_clusters = len(unique_clusters)
+        
+        return ClusteringResponse(labels=labels, n_clusters=n_clusters)
+        
+    except Exception as e:
+        logger.error(f"聚类计算错误: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error during clustering: {str(e)}",
         ) from e
