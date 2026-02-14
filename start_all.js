@@ -87,15 +87,67 @@ function run(cmd, args, cwd, name, baseLogName, env = process.env) {
   
   const p = spawn(cmd, args, { cwd, shell: true, stdio: 'pipe', env });
   
-  p.stdout.on('data', (data) => {
-    process.stdout.write(`[${name}] ${data}`);
-    logStream.write(stripAnsi(data.toString()));
-  });
-  
-  p.stderr.on('data', (data) => {
-    process.stderr.write(`[${name}] ${data}`);
-    logStream.write(stripAnsi(data.toString()));
-  });
+  // Helper to handle stream data with buffering and timestamping
+  const createLogHandler = (streamName, isError = false) => {
+    let buffer = '';
+    return (data) => {
+      const chunk = data.toString();
+      
+      // Output to terminal (keep original behavior for now, or improved?)
+      // Original: process.stdout.write(`[${name}] ${data}`);
+      // Let's keep it simple for terminal to avoid double buffering issues there
+      if (isError) {
+        process.stderr.write(`[${name}] ${chunk}`);
+      } else {
+        process.stdout.write(`[${name}] ${chunk}`);
+      }
+
+      // Process for log file
+      // 1. Strip ANSI codes
+      const cleanChunk = stripAnsi(chunk);
+      buffer += cleanChunk;
+
+      // 2. Process complete lines
+      let lineEndIndex;
+      while ((lineEndIndex = buffer.indexOf('\n')) !== -1) {
+        let line = buffer.substring(0, lineEndIndex);
+        buffer = buffer.substring(lineEndIndex + 1);
+        
+        // Try to parse JSON log (for ML Service)
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith('{') && trimmedLine.endsWith('}')) {
+          try {
+            const logObj = JSON.parse(trimmedLine);
+            if (logObj.level && logObj.message) {
+              const level = logObj.level.toUpperCase();
+              const module = logObj.module || logObj.logger || '';
+              const moduleStr = module ? ` [${module}]` : '';
+              line = `[${level}]${moduleStr} ${logObj.message}`;
+            }
+          } catch (e) {
+            // Not valid JSON, ignore and print raw line
+          }
+        }
+
+        // 3. Add Timestamp
+        const now = new Date();
+        const timeStr = now.getFullYear() + '-' +
+          String(now.getMonth() + 1).padStart(2, '0') + '-' +
+          String(now.getDate()).padStart(2, '0') + ' ' +
+          String(now.getHours()).padStart(2, '0') + ':' +
+          String(now.getMinutes()).padStart(2, '0') + ':' +
+          String(now.getSeconds()).padStart(2, '0');
+        
+        // Only write if line is not empty (or just write it?)
+        // Writing empty lines with timestamps might be noisy, but accurate.
+        // Let's write it.
+        logStream.write(`[${timeStr}] ${line}\n`);
+      }
+    };
+  };
+
+  p.stdout.on('data', createLogHandler('STDOUT'));
+  p.stderr.on('data', createLogHandler('STDERR', true));
   
   p.on('error', (err) => {
     console.error(`${name} 错误:`, err);
@@ -139,7 +191,7 @@ buildLogger.on('close', (code) => {
       path.join(process.cwd(), 'services/meridian-ml-service'), 
       'ML Service',
       'ml_service',
-      { ...env, PYTHONUTF8: '1' });
+      { ...env, PYTHONUTF8: '1', PYTHONUNBUFFERED: '1' });
 });
 
 console.log('所有服务已启动。日志位于 ./logs 目录。按 Ctrl+C 停止。');
