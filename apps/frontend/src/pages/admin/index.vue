@@ -12,7 +12,7 @@ if (sourcesError.value) {
   if (sourcesError.value.statusCode === 401) {
     await navigateTo('/admin/login');
   } else {
-    throw createError({ statusCode: 500, statusMessage: 'Failed to fetch sources' });
+    throw createError({ statusCode: 500, statusMessage: '获取数据源失败' });
   }
 }
 
@@ -125,9 +125,9 @@ const toggleSort = (key: keyof Source) => {
   }
 };
 const formatDate = (dateStr: string | null | undefined) => {
-  if (!dateStr) return 'Never';
+  if (!dateStr) return '从未';
   const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return 'Never';
+  if (Number.isNaN(date.getTime())) return '从未';
 
   const Y = date.getFullYear();
   const M = String(date.getMonth() + 1).padStart(2, '0');
@@ -139,18 +139,18 @@ const formatDate = (dateStr: string | null | undefined) => {
 };
 
 const formatTimeAgo = (dateStr: string | null) => {
-  if (!dateStr) return 'Never';
+  if (!dateStr) return '从未';
   return formatDistanceToNow(new Date(dateStr), { addSuffix: true });
 };
 
 async function addSource() {
-  const url = prompt('Enter the URL of the source you want to add');
+  const url = prompt('请输入 RSS 源的 URL');
   if (!url) return;
 
   const urlSchema = z.string().url();
   const result = urlSchema.safeParse(url);
   if (!result.success) {
-    alert('Invalid URL');
+    alert('URL 格式无效');
     return;
   }
 
@@ -159,49 +159,53 @@ async function addSource() {
       method: 'POST',
       body: { url },
     });
-    alert('Source added successfully');
+    alert('数据源添加成功');
   } catch (error) {
     console.error(sourcesError, error);
-    throw createError({ statusCode: 500, statusMessage: 'Failed to fetch sources' });
+    throw createError({ statusCode: 500, statusMessage: '获取数据源失败' });
   }
 }
 
 const isInitializing = ref(false);
+const isReprocessing = ref(false);
 const isGeneratingBrief = ref(false);
 
-async function generateBrief() {
-  if (!confirm('This will trigger a full intelligence briefing generation. Continue?')) return;
-  
-  if (isGeneratingBrief.value) return;
-  isGeneratingBrief.value = true;
-  try {
-    await $fetch('/api/admin/briefs/trigger', {
-      method: 'POST',
-    });
-    alert('Intelligence briefing triggered successfully.');
-  } catch (error) {
-    console.error('Failed to trigger briefing', error);
-    alert('Failed to trigger briefing');
-  } finally {
-    isGeneratingBrief.value = false;
-  }
-}
-
 async function initializeSchedulers() {
-  if (!confirm('This will force re-initialization of all data source schedulers. Continue?')) return;
-  
   if (isInitializing.value) return;
   isInitializing.value = true;
   try {
-    const result = await $fetch('/api/admin/sources/initialize', {
-      method: 'POST',
-    });
-    alert(`Successfully initialized ${result.initialized} out of ${result.total} sources.`);
-  } catch (error) {
-    console.error('Failed to initialize schedulers', error);
-    alert('Failed to initialize schedulers');
+    await $fetch('/api/admin/schedulers/init', { method: 'POST' });
+    alert('调度器初始化成功');
+  } catch (e: any) {
+    alert('初始化调度器失败: ' + e.message);
   } finally {
     isInitializing.value = false;
+  }
+}
+
+async function reprocessArticles() {
+  if (isReprocessing.value) return;
+  isReprocessing.value = true;
+  try {
+    const res = await $fetch<{ success: boolean; count: number }>('/api/admin/articles/reprocess', { method: 'POST' });
+    alert(`已开始重新处理 ${res.count} 篇文章`);
+  } catch (e: any) {
+    alert('重处理文章失败: ' + e.message);
+  } finally {
+    isReprocessing.value = false;
+  }
+}
+
+async function generateBrief() {
+  if (isGeneratingBrief.value) return;
+  isGeneratingBrief.value = true;
+  try {
+    await $fetch('/api/admin/briefs/trigger', { method: 'POST' });
+    alert('情报简报生成已触发');
+  } catch (e: any) {
+    alert('触发简报生成失败: ' + e.message);
+  } finally {
+    isGeneratingBrief.value = false;
   }
 }
 
@@ -238,26 +242,33 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
 <template>
   <div>
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-xl font-medium text-gray-900">Source Analytics</h1>
+      <h1 class="text-xl font-medium text-gray-900">管理后台</h1>
 
       <!-- button to add a new source -->
       <div class="flex gap-2">
         <button
           class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="isReprocessing"
+          @click="reprocessArticles"
+        >
+          {{ isReprocessing ? '处理中...' : '重处理文章' }}
+        </button>
+        <button
+          class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="isGeneratingBrief"
           @click="generateBrief"
         >
-          {{ isGeneratingBrief ? 'Generating...' : 'Generate Briefing' }}
+          {{ isGeneratingBrief ? '生成中...' : '生成情报简报' }}
         </button>
         <button
           class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="isInitializing"
           @click="initializeSchedulers"
         >
-          {{ isInitializing ? 'Initializing...' : 'Initialize Schedulers' }}
+          {{ isInitializing ? '初始化中...' : '初始化调度器' }}
         </button>
         <button class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100" @click="addSource">
-          Add Source
+          添加数据源
         </button>
       </div>
     </div>
@@ -265,35 +276,35 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
     <!-- Overview Section -->
     <div v-if="overview" class="grid grid-cols-4 gap-4 mb-6">
       <div class="col-span-4 bg-white p-4 rounded border">
-        <h2 class="text-lg font-medium text-gray-900 mb-4">System Overview</h2>
+        <h2 class="text-lg font-medium text-gray-900 mb-4">系统概览</h2>
         <div class="grid grid-cols-4 gap-4">
           <!-- Last Activity -->
           <div class="space-y-2">
-            <div class="text-xs text-gray-500 uppercase tracking-wide">Last Activity</div>
+            <div class="text-xs text-gray-500 uppercase tracking-wide">最近活动</div>
             <div>
-              <div class="text-sm text-gray-600">Source Check: {{ formatTimeAgo(overview.lastSourceCheck) }}</div>
+              <div class="text-sm text-gray-600">检查源: {{ formatTimeAgo(overview.lastSourceCheck) }}</div>
               <div class="text-sm text-gray-600">
-                Article Processed: {{ formatTimeAgo(overview.lastArticleProcessed) }}
+                处理文章: {{ formatTimeAgo(overview.lastArticleProcessed) }}
               </div>
-              <div class="text-sm text-gray-600">Article Fetched: {{ formatTimeAgo(overview.lastArticleFetched) }}</div>
+              <div class="text-sm text-gray-600">抓取文章: {{ formatTimeAgo(overview.lastArticleFetched) }}</div>
             </div>
           </div>
 
           <!-- Today's Stats -->
           <div class="space-y-2">
-            <div class="text-xs text-gray-500 uppercase tracking-wide">Today's Stats</div>
+            <div class="text-xs text-gray-500 uppercase tracking-wide">今日统计</div>
             <div>
-              <div class="text-sm text-gray-600">Articles Fetched: {{ overview.articlesFetchedToday }}</div>
-              <div class="text-sm text-gray-600">Articles Processed: {{ overview.articlesProcessedToday }}</div>
-              <div class="text-sm text-gray-600">Errors: {{ overview.errorsToday }}</div>
+              <div class="text-sm text-gray-600">已抓取文章: {{ overview.articlesFetchedToday }}</div>
+              <div class="text-sm text-gray-600">已处理文章: {{ overview.articlesProcessedToday }}</div>
+              <div class="text-sm text-gray-600">错误数: {{ overview.errorsToday }}</div>
             </div>
           </div>
 
           <!-- Source Health -->
           <div class="space-y-2">
-            <div class="text-xs text-gray-500 uppercase tracking-wide">Source Health</div>
+            <div class="text-xs text-gray-500 uppercase tracking-wide">数据源健康度</div>
             <div>
-              <div class="text-sm text-gray-600">Total Sources: {{ overview.totalSourcesCount }}</div>
+              <div class="text-sm text-gray-600">总数据源: {{ overview.totalSourcesCount }}</div>
               <div
                 class="text-sm"
                 :class="{
@@ -301,7 +312,7 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
                   'text-gray-600': overview.staleSourcesCount === 0,
                 }"
               >
-                Stale Sources: {{ overview.staleSourcesCount }}
+                停滞数据源: {{ overview.staleSourcesCount }}
               </div>
             </div>
           </div>
@@ -311,11 +322,11 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
 
     <div class="grid grid-cols-4 gap-4 mb-6">
       <div class="bg-white p-4 rounded border">
-        <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Avg Process Success</div>
+        <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">平均处理成功率</div>
         <div class="text-2xl font-medium text-gray-900">{{ stats?.avgProcessSuccess ?? '-' }}%</div>
       </div>
       <div class="bg-white p-4 rounded border">
-        <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Avg Error Rate</div>
+        <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">平均错误率</div>
         <div
           class="text-2xl font-medium"
           :class="{ 'text-red-600': (stats?.avgErrorRate ?? 0) > 5, 'text-gray-900': (stats?.avgErrorRate ?? 0) <= 5 }"
@@ -324,7 +335,7 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
         </div>
       </div>
       <div class="bg-white p-4 rounded border">
-        <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Avg Articles/Day</div>
+        <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">日均文章数</div>
         <div class="text-2xl font-medium text-gray-900">{{ stats?.avgArticlesPerDay ?? '-' }}</div>
       </div>
     </div>
@@ -332,9 +343,9 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
     <div class="bg-white rounded border p-4 mb-4">
       <div class="flex flex-wrap gap-6 items-center text-sm">
         <div class="flex items-center gap-2">
-          <label class="text-gray-600">Frequency:</label>
+          <label class="text-gray-600">抓取频率:</label>
           <select v-model="selectedFrequency" class="border rounded px-2 py-1.5 text-sm bg-white">
-            <option value="all">All</option>
+            <option value="all">全部</option>
             <option v-for="freq in FREQUENCIES" :key="freq" :value="freq">{{ freq }}</option>
           </select>
         </div>
@@ -342,14 +353,14 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
         <div class="flex items-center gap-2">
           <label class="inline-flex items-center gap-2">
             <input v-model="showPaywallOnly" type="checkbox" class="rounded border-gray-300" />
-            <span class="text-gray-600">Paywall only</span>
+            <span class="text-gray-600">仅付费墙</span>
           </label>
         </div>
 
         <div class="flex items-center gap-2">
           <label class="inline-flex items-center gap-2">
             <input v-model="showErrorsOnly" type="checkbox" class="rounded border-gray-300" />
-            <span class="text-gray-600">Error rate above:</span>
+            <span class="text-gray-600">错误率高于:</span>
           </label>
           <input
             v-model="errorThreshold"
@@ -365,7 +376,7 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
         <div class="flex items-center gap-2">
           <label class="inline-flex items-center gap-2">
             <input v-model="enableTimeFilter" type="checkbox" class="rounded border-gray-300" />
-            <span class="text-gray-600">Sources checked within:</span>
+            <span class="text-gray-600">检查时间在:</span>
           </label>
           <input
             v-model="staleHours"
@@ -374,21 +385,21 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
             :disabled="!enableTimeFilter"
             class="border rounded px-2 py-1.5 w-16 text-sm disabled:opacity-50 bg-white"
           />
-          <span class="text-gray-600">hours</span>
+          <span class="text-gray-600">小时内</span>
         </div>
 
         <div class="flex items-center gap-2">
           <label class="inline-flex items-center gap-2">
             <input v-model="enableArticleFilter" type="checkbox" class="rounded border-gray-300" />
-            <span class="text-gray-600">Articles:</span>
+            <span class="text-gray-600">文章数:</span>
           </label>
           <select
             v-model="articleCountFilter"
             :disabled="!enableArticleFilter"
             class="border rounded px-2 py-1.5 text-sm disabled:opacity-50 bg-white"
           >
-            <option value="more">More than</option>
-            <option value="less">Less than</option>
+            <option value="more">大于</option>
+            <option value="less">小于</option>
           </select>
           <input
             v-model="articleCountThreshold"
@@ -402,8 +413,8 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
     </div>
 
     <div class="text-sm text-gray-600 mb-4">
-      Showing {{ filteredArticles }} / {{ totalArticles }} articles from {{ filteredSources.length }} /
-      {{ sources?.length ?? 0 }} sources
+      显示 {{ filteredArticles }} / {{ totalArticles }} 篇文章，来自 {{ filteredSources.length }} /
+      {{ sources?.length ?? 0 }} 个数据源
     </div>
 
     <div class="bg-white text-gray-800 rounded border overflow-hidden">
@@ -411,33 +422,33 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
         <thead>
           <tr class="bg-gray-50">
             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8" />
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">数据源</th>
             <th
               class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               @click="toggleSort('lastChecked')"
             >
-              Last Fetch
+              上次抓取
               <span v-if="sortKey === 'lastChecked'" class="text-gray-400">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
             </th>
             <th
               class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               @click="toggleSort('nextFetchAt')"
             >
-              Next Fetch
+              下次抓取
               <span v-if="sortKey === 'nextFetchAt'" class="text-gray-400">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
             </th>
             <th
               class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               @click="toggleSort('errorRate')"
             >
-              Error Rate
+              错误率
               <span v-if="sortKey === 'errorRate'" class="text-gray-400">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
             </th>
             <th
               class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               @click="toggleSort('processSuccessRate')"
             >
-              Success Rate
+              成功率
               <span v-if="sortKey === 'processSuccessRate'" class="text-gray-400">{{
                 sortOrder === 'asc' ? '↑' : '↓'
               }}</span>
@@ -446,7 +457,7 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
               class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               @click="toggleSort('totalArticles')"
             >
-              Total Articles
+              总文章数
               <span v-if="sortKey === 'totalArticles'" class="text-gray-400">{{
                 sortOrder === 'asc' ? '↑' : '↓'
               }}</span>
@@ -455,12 +466,12 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
               class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               @click="toggleSort('avgPerDay')"
             >
-              Avg/Day
+              日均量
               <span v-if="sortKey === 'avgPerDay'" class="text-gray-400">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
             </th>
 
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8">Paywall</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8">付费墙</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200">
@@ -509,7 +520,7 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
               />
             </td>
             <td class="px-4 py-2">
-              <NuxtLink :to="`/admin/feed/${source.id}`" class="text-blue-600 hover:underline"> View Feed </NuxtLink>
+              <NuxtLink :to="`/admin/feed/${source.id}`" class="text-blue-600 hover:underline"> 查看源 </NuxtLink>
             </td>
           </tr>
         </tbody>

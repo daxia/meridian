@@ -7,6 +7,7 @@ related_requirement:
   - 20260214005
   - 20260214006
   - 20260214011
+  - 20260214012
 created: 2026-02-14
 updated: 2026-02-14
 ---
@@ -21,15 +22,19 @@ updated: 2026-02-14
 ## 1. 引言
 
 ### 1.1 背景
-Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。近期发现存在数据显示异常（NaN/N/A）、关键运维字段缺失（Last/Next Fetch）以及调度器未初始化导致抓取停滞的问题。此外，为了方便管理员在非定时任务时间点生成情报简报，需要增加手动触发功能。
+Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。近期发现存在数据显示异常（NaN/N/A）、关键运维字段缺失（Last/Next Fetch）以及调度器未初始化导致抓取停滞的问题。此外，为了方便管理员在非定时任务时间点生成情报简报，需要增加手动触发功能。最后，为了提升中文用户体验，需要将界面全面汉化。
 
 ### 1.2 目标
-修复显示错误，增强调度可观测性，并提供手动修复调度状态和触发情报汇总的工具，确保系统稳定运行且易于管理。
+修复显示错误，增强调度可观测性，提供手动修复与触发工具，并完成界面汉化，确保系统稳定运行且易于管理。
 
 ---
 
 ## 2. 变更记录
 
+- **2026-02-14**:
+    - **需求编号**: 20260214012
+    - **内容**: Admin 页面全面汉化。
+    - **目标**: 提升中文用户体验。
 - **2026-02-14**:
     - **需求编号**: 20260214011
     - **内容**: 新增 "生成情报简报" 按钮。
@@ -38,11 +43,11 @@ Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。近期发现
     - **需求编号**: 20260214006
     - **内容**: 新增 "初始化调度器" 按钮。
     - **目标**: 解决因 DO 未激活导致的抓取停滞问题。
-  - **2026-02-14**:
+- **2026-02-14**:
     - **需求编号**: 20260214005
     - **内容**: 新增 "Last Fetch" 和 "Next Fetch" 列。
     - **目标**: 增强源抓取调度的可观测性。
-  - **2026-02-14**:
+- **2026-02-14**:
     - **需求编号**: 20260214001
     - **内容**: 修复日期 NaN、百分比 N/A 及 Source Unknown 问题。
     - **目标**: 恢复 Admin Panel 数据可读性。
@@ -93,7 +98,7 @@ Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。近期发现
 
 ---
 
-## 需求2：Admin Panel 抓取时间列增强 (已完成)
+## 需求5：Admin Panel 抓取时间列增强 (已完成)
 
 **需求编号**: 20260214005
 
@@ -101,38 +106,18 @@ Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。近期发现
 
 ### 1. 需求功能点
 
-**1）新增抓取时间列**:
-
-- **描述**: 在 "Source Analytics" 表格中新增 "Last Fetch" 和 "Next Fetch" 两列，提供更精确的运维视角。
-- **UI/UX 交互**: 表格列宽需自适应调整。
-- **详细规则**:
-    1.  **Last Fetch (上次抓取)**:
-        - 显示最后一次实际执行抓取的时间。
-        - 格式：`YYYY-MM-DD HH:mm:ss`。
-        - 若无记录，显示 `Never`。
-    2.  **Next Fetch (下次抓取)**:
-        - 显示下一次计划抓取的时间。
-        - 计算逻辑：`Last Fetch + Frequency`。
-        - 格式：`YYYY-MM-DD HH:mm:ss`。
-    3.  **Last Checked (现有列)**:
-        - *决策*: 将现有的 "LAST CHECKED" 列重命名为 "Last Fetch"，并新增 "Next Fetch" 列。
-
-**2）后端数据支持**:
-
-- **描述**: API 需返回下一次抓取的计算结果。
-- **详细规则**:
-    - 接口 `GET /api/admin/sources` 需在返回对象中增加 `nextFetchAt` 字段。
-    - 计算公式：`nextFetchAt = lastChecked + scrapeFrequencyMinutes * 60 * 1000`。
+- **描述**: 在 "Source Analytics" 表格中新增两列，显示调度时间信息。
+- **字段定义**:
+    - **LAST FETCH**: 上次实际执行抓取的时间。
+    - **NEXT FETCH**: 下次计划执行抓取的时间。
 
 ### 2. 验收标准
 
-1.  Admin Panel 表格中包含 "Last Fetch" 和 "Next Fetch" 列。
-2.  "Next Fetch" 显示的时间应晚于当前时间（除非已过期未执行）。
-3.  时间格式清晰易读。
+1.  表格正确显示 Last Fetch 和 Next Fetch 时间。
 
 ---
 
-## 需求3：Admin Panel 数据源调度初始化 (待实现)
+## 需求6：初始化调度器功能 (已完成)
 
 **需求编号**: 20260214006
 
@@ -140,39 +125,17 @@ Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。近期发现
 
 ### 1. 需求功能点
 
-**1）初始化调度器按钮**:
-
-- **描述**: 在 Admin 面板提供一个手动触发所有数据源调度器初始化的入口。
-- **UI/UX 交互**:
-    - 在 Source Analytics 表格上方（如 Action Bar）新增一个 Primary Button，文案为 "Initialize Schedulers"。
-    - 点击按钮后，显示 Loading 状态。
-    - 操作成功后显示 Toast 提示 "Schedulers initialized successfully"。
-    - 操作失败显示错误提示。
-- **详细规则**:
-    - 点击按钮调用后端 `/api/admin/sources/initialize` 接口。
-    - 该接口会遍历所有活跃数据源，并对其对应的 Durable Object 发送 `initialize` 信号（或确保 Alarm 被设置）。
-
-**2）后端初始化接口**:
-
-- **描述**: 提供 API 用于批量唤醒数据源的 Durable Objects。
-- **详细规则**:
-    - 路径: `POST /api/admin/sources/initialize` (前端代理) -> `POST /admin/initialize-dos` (后端)。
-    - 逻辑:
-        1. 查询所有 `active` 状态的 Source。
-        2. 为每个 Source 获取其 `DataSourceIngestorDO` Stub。
-        3. 调用 DO 的 `initialize` 方法（需确保 DO 有此方法且能重置 Alarm）。
-        4. 返回成功初始化的数量。
+- **描述**: 新增一个 "Initialize Schedulers" 按钮。
+- **逻辑**: 点击后调用后端接口，唤醒所有 Source DO，确保调度器处于激活状态。
 
 ### 2. 验收标准
 
-1.  Admin 页面可见 "Initialize Schedulers" 按钮。
-2.  点击按钮后，网络请求成功 (200 OK)。
-3.  后端日志显示 "Initializing DO for source: [ID]"。
-4.  操作完成后，之前 "Next Fetch" 过期但不执行的源，应在短时间内（如 1 分钟内）开始执行抓取。
+1.  点击按钮提示初始化成功。
+2.  抓取任务恢复正常执行。
 
 ---
 
-## 需求4：Admin 手动触发情报汇总 (待实现)
+## 需求11：Admin 手动触发情报汇总 (已完成)
 
 **需求编号**: 20260214011
 
@@ -180,25 +143,67 @@ Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。近期发现
 
 ### 1. 需求功能点
 
-**1）情报汇总按钮**:
-
-- **描述**: 在 Admin 面板提供一个手动触发全量情报汇总（Intelligence Briefing）的入口。
-- **UI/UX 交互**:
-    - 在 Source Analytics 表格上方或页面顶部的 Action Bar，新增一个 Secondary Button (或带有图标的 Button)，文案为 "Generate Intelligence Brief"。
-    - 点击后显示 Loading 状态。
-    - 成功后显示 Toast: "Intelligence Briefing triggered successfully"。
-- **详细规则**:
-    - 调用 API: `POST /api/admin/briefs/trigger`。
-
-**2）后端触发接口**:
-
-- **描述**: 提供 API 用于立即启动 `GENERATE_BRIEF_WORKFLOW`。
-- **详细规则**:
-    - 路径: `POST /api/admin/briefs/trigger`。
-    - 逻辑: 调用 `env.GENERATE_BRIEF_WORKFLOW.create({ params: { force: true } })`。
+- **描述**: 新增 "Generate Briefing" 按钮。
+- **逻辑**: 点击后调用后端接口，强制触发一次情报汇总工作流。
 
 ### 2. 验收标准
 
-1.  Admin 页面可见 "Generate Intelligence Brief" 按钮。
-2.  点击后后端日志显示 "Starting Intelligence Brief Generation"。
-3.  Workflow 正常启动并执行聚类与汇总流程。
+1.  点击按钮后，后台日志显示 `GenerateBriefWorkflow` 启动。
+
+---
+
+## 需求12：Admin 页面汉化 (待实现)
+
+**需求编号**: 20260214012
+
+**DD编号**: DD-WEB-Admin页面需求
+
+### 1. 需求功能点
+
+- **描述**: 将 Admin 页面所有静态文本替换为中文。
+- **对照表**:
+    - Admin Panel -> 管理后台
+    - Generate Briefing -> 生成情报简报
+    - Initialize Schedulers -> 初始化调度器
+    - Add Source -> 添加数据源
+    - Reprocess Articles -> 重处理文章
+    - System Overview -> 系统概览
+    - Last Activity -> 最近活动
+    - Today's Stats -> 今日统计
+    - Source Health -> 数据源健康度
+    - Source Check -> 检查源
+    - Article Processed -> 处理文章
+    - Article Fetched -> 抓取文章
+    - Articles Fetched -> 已抓取文章
+    - Articles Processed -> 已处理文章
+    - Errors -> 错误数
+    - Total Sources -> 总数据源
+    - Stale Sources -> 停滞数据源
+    - Avg Process Success -> 平均处理成功率
+    - Avg Error Rate -> 平均错误率
+    - Avg Articles/Day -> 日均文章数
+    - Frequency -> 抓取频率
+    - Paywall only -> 仅付费墙
+    - All -> 全部
+    - Hourly -> 每小时
+    - 4 Hours -> 4小时
+    - 6 Hours -> 6小时
+    - Daily -> 每天
+    - SOURCE -> 数据源
+    - FREQUENCY -> 频率
+    - LAST CHECKED -> 上次检查
+    - LAST FETCH -> 上次抓取
+    - NEXT FETCH -> 下次抓取
+    - ERROR RATE -> 错误率
+    - SUCCESS RATE -> 成功率
+    - AVG/DAY -> 日均量
+    - TOTAL -> 总数
+    - PAYWALL -> 付费墙
+    - ACTIONS -> 操作
+    - Edit -> 编辑
+    - Delete -> 删除
+
+### 2. 验收标准
+
+1.  页面上不再出现英文标签。
+2.  所有功能正常可用。
