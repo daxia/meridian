@@ -60,6 +60,16 @@ curl -X POST http://localhost:8787/admin/settings \
 ```
 *注：`llm_model` 设为空字符串时将使用提供商的默认模型。*
 
+### 2.3 前端界面配置 (推荐)
+
+系统提供了可视化配置界面，操作更加便捷：
+
+1. 登录 Admin 面板。
+2. 点击顶部导航栏的 **Settings**。
+3. 在 **LLM Configuration** 区域选择 Provider 为 `Zhipu AI (GLM)`。
+4. (可选) 输入 API Key（如果未配置环境变量）。
+5. 点击 **Save Settings** 保存。
+
 ## 3. 查看当前配置
 
 使用 `GET /admin/settings` 查看当前生效的配置：
