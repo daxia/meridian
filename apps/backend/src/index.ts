@@ -40,22 +40,22 @@ export default {
   fetch: (request: Request, env: Env, ctx: ExecutionContext) => app.fetch(request, env, ctx),
   async queue(batch: MessageBatch<ProcessArticlesParams>, env: Env, ctx: ExecutionContext): Promise<void> {
     const batchLogger = queueLogger.child({ batch_size: batch.messages.length });
-    batchLogger.info('收到一批待处理的文章');
+    batchLogger.info('Received batch of articles to process');
 
     const articlesToProcess: number[] = [];
     for (const message of batch.messages) {
       const { ingested_item_ids } = message.body as ProcessArticlesParams;
-      batchLogger.debug('正在处理消息', { message_id: message.id, article_count: ingested_item_ids.length });
+      batchLogger.debug('Processing message', { message_id: message.id, article_count: ingested_item_ids.length });
 
       for (const id of ingested_item_ids) {
         articlesToProcess.push(id);
       }
     }
 
-    batchLogger.info('从批次中提取文章', { total_articles: articlesToProcess.length });
+    batchLogger.info('Extracted articles from batch', { total_articles: articlesToProcess.length });
 
     if (articlesToProcess.length === 0) {
-      batchLogger.info('队列批次为空，无内容处理');
+      batchLogger.info('Queue batch is empty, nothing to process');
       batch.ackAll(); // Acknowledge the empty batch
       return;
     }
@@ -67,14 +67,14 @@ export default {
       articleChunks.push(articlesToProcess.slice(i, i + CHUNK_SIZE));
     }
 
-    batchLogger.info('文章分块完成', { chunk_count: articleChunks.length });
+    batchLogger.info('Articles chunked successfully', { chunk_count: articleChunks.length });
 
     // Process each chunk sequentially
     for (const chunk of articleChunks) {
       const workflowResult = await startProcessArticleWorkflow(env, { ingested_item_ids: chunk });
       if (workflowResult.isErr()) {
         queueLogger.error(
-          '触发文章处理工作流失败',
+          'Failed to trigger article processing workflow',
           workflowResult.error,
           { error_message: workflowResult.error.message, chunk_size: chunk.length }
         );
@@ -83,7 +83,7 @@ export default {
         return;
       }
 
-      queueLogger.info('成功触发文章处理工作流', {
+      queueLogger.info('Successfully triggered article processing workflow', {
         workflow_id: workflowResult.value.id,
         chunk_size: chunk.length,
       });
@@ -124,7 +124,7 @@ export default {
         const diffMs = nextCheck - now;
         const diffSec = Math.round(diffMs / 1000);
         
-        logger.info(`[SourceMonitor] 源 ${source.name} (ID: ${source.id}) 距离下次抓取还有 ${diffSec} 秒`, {
+        logger.info(`[SourceMonitor] Source ${source.name} (ID: ${source.id}) next fetch in ${diffSec} seconds`, {
           source_id: source.id,
           source_name: source.name,
           last_checked: source.lastChecked,
@@ -133,7 +133,7 @@ export default {
         });
       }
     } catch (error) {
-      logger.error('源状态监控失败', { error: error instanceof Error ? error.message : String(error) });
+      logger.error('Source monitor failed', { error: error instanceof Error ? error.message : String(error) });
     }
   },
 } satisfies ExportedHandler<Env>;
