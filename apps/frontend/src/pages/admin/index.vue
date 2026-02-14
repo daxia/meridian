@@ -175,10 +175,14 @@ async function initializeSchedulers() {
   if (isInitializing.value) return;
   isInitializing.value = true;
   try {
-    await $fetch('/api/admin/sources/initialize', { method: 'POST' });
+    console.log('开始初始化调度器...');
+    const result = await $fetch('/api/admin/sources/initialize', { method: 'POST' });
+    console.log('初始化结果:', result);
     alert('调度器初始化成功');
   } catch (e: any) {
-    alert('初始化调度器失败: ' + e.message);
+    console.error('初始化调度器失败:', e);
+    const errorMsg = e.message || e.data?.message || e.statusMessage || '未知错误';
+    alert('初始化调度器失败: ' + errorMsg + '\n\n请检查浏览器控制台获取详细信息');
   } finally {
     isInitializing.value = false;
   }
@@ -188,10 +192,14 @@ async function reprocessArticles() {
   if (isReprocessing.value) return;
   isReprocessing.value = true;
   try {
+    console.log('开始重新处理文章...');
     const res = await $fetch<{ success: boolean; count: number }>('/api/admin/articles/reprocess', { method: 'POST' });
+    console.log('重新处理结果:', res);
     alert(`已开始重新处理 ${res.count} 篇文章`);
   } catch (e: any) {
-    alert('重处理文章失败: ' + e.message);
+    console.error('重新处理文章失败:', e);
+    const errorMsg = e.message || e.data?.message || e.statusMessage || '未知错误';
+    alert('重新处理文章失败: ' + errorMsg + '\n\n请检查浏览器控制台获取详细信息');
   } finally {
     isReprocessing.value = false;
   }
@@ -202,14 +210,17 @@ async function generateBrief() {
 
   isGeneratingBrief.value = true;
   try {
+    console.log('开始生成情报简报...');
     const res = await $fetch<{ instanceId: string; message: string }>('/api/admin/briefs/trigger', {
       method: 'POST',
       body: { hoursLookback: briefHoursLookback.value },
     });
+    console.log('生成简报结果:', res);
     alert('已触发简报生成工作流！\n实例ID: ' + res.instanceId + '\n消息: ' + res.message);
   } catch (e: any) {
-    console.error(e);
-    alert('触发失败: ' + e.message);
+    console.error('生成简报失败:', e);
+    const errorMsg = e.message || e.data?.message || e.statusMessage || '未知错误';
+    alert('触发失败: ' + errorMsg + '\n\n请检查浏览器控制台获取详细信息');
   } finally {
     isGeneratingBrief.value = false;
   }

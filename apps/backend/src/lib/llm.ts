@@ -21,15 +21,14 @@ export function createLLMModel(env: Env, config: LLMConfig) {
   if (provider === 'glm') {
     // GLM (Zhipu AI) is OpenAI compatible
     // 使用 Chat Completions API (v2 规范）而不是 Responses API
+    const baseURL = (config.baseURL || env.GLM_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4/').replace(/\/$/, '');
+
     const openai = createOpenAI({
       apiKey: config.apiKey || env.GLM_API_KEY,
-      baseURL: config.baseURL || env.GLM_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4/',
+      baseURL: `${baseURL}/chat/completions`,
     });
 
-    // 添加 Chat Completions 路径
-    return openai(config.modelName || 'glm-4-flash', {
-      baseURL: (config.baseURL || env.GLM_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4/') + 'chat/completions'
-    });
+    return openai(config.modelName || 'glm-4-flash');
   }
 
   if (provider === 'openai') {

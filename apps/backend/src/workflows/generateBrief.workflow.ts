@@ -40,7 +40,7 @@ export class GenerateBriefWorkflow extends WorkflowEntrypoint<Env, GenerateBrief
       timestamp: new Date().toISOString(),
     });
 
-    logger.info('Starting Intelligence Brief Generation');
+    logger.info('Starting Intelligence Brief Generation (DEBUG MODE - embedding check disabled for testing)');
 
     // 1. Fetch recent processed articles with embeddings
     const lookbackHours = event.payload.hoursLookback || 24;
@@ -60,7 +60,8 @@ export class GenerateBriefWorkflow extends WorkflowEntrypoint<Env, GenerateBrief
         .where(
           and(
             eq($ingested_items.status, 'PROCESSED'),
-            isNotNull($ingested_items.embedding),
+            // 调试模式：移除 embedding IS NOT NULL 条件，允许没有 embedding 的文章也参与
+            // isNotNull($ingested_items.embedding),
             gte($ingested_items.processed_at, since)
           )
         );
@@ -69,10 +70,35 @@ export class GenerateBriefWorkflow extends WorkflowEntrypoint<Env, GenerateBrief
     if (articles.length === 0) {
       const msg = 'No articles found in the last ' + lookbackHours + ' hours.';
       logger.info(msg);
+      logger.warn('⚠️ 简报生成失败：没有找到任何符合条件的文章');
+      logger.warn('📊 可能原因：1) RSS抓取未完成 2) 文章处理失败 3) 所有文章都没有embedding');
       return { success: false, message: msg };
     }
 
+    // 📊 记录文章状态统计
+    logger.info(`✅ 简报生成继续：使用 ${articles.length} 篇文章`);
+    if (articlesWithoutEmbedding.length > 0) {
+      logger.warn(`⚠️ 注意：${articlesWithoutEmbedding.length} 篇文章没有embedding，可能影响聚类质量`);
+    }
+
     logger.info(`Fetched ${articles.length} articles for processing.`);
+
+    // 📊 调试模式统计（已移除 embedding 检查）
+    const articlesWithEmbedding = articles.filter(a => a.embedding !== null);
+    const articlesWithoutEmbedding = articles.filter(a => a.embedding === null);
+    const articlesProcessedToday = articles.filter(a => {
+      const processedAt = a.processed_at;
+      if (!processedAt) return false;
+      const hoursAgo = (Date.now() - processedAt.getTime()) / (1000 * 60 * 60);
+      return hoursAgo <= 24;
+    });
+
+    logger.info(`📊 调试统计: 总=${articles.length}, 有embedding=${articlesWithEmbedding.length}, 无embedding=${articlesWithoutEmbedding.length}, 24h内处理=${articlesProcessedToday.length}`);
+
+    // ⚠️ 不阻塞主任务：即使部分文章处理失败，也继续尝试生成简报
+    if (articlesWithoutEmbedding.length > 0) {
+      logger.warn(`⚠️ 注意：${articlesWithoutEmbedding.length} 篇文章没有embedding，聚类功能可能受影响`);
+    }
 
     // 2. Cluster Articles
     const clusteringResult = await step.do('cluster-articles', mlStepConfig, async () => {
