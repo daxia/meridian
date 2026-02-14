@@ -8,6 +8,13 @@ const configDir = path.join(process.cwd(), '.config');
 const wranglerHome = path.join(process.cwd(), '.wrangler_home');
 const logsDir = path.join(process.cwd(), 'logs');
 
+// Regex to match ANSI escape codes (Robust version from strip-ansi)
+const ansiRegex = /[\u001b\u009b][[()#;?]*(?:(?:(?:(?:;[-a-zA-Z\d\/#&.:=?%@~_]+)*|[a-zA-Z\d]+(?:;[-a-zA-Z\d\/#&.:=?%@~_]+)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PR-TZcf-ntqry=><~]))/g;
+
+function stripAnsi(str) {
+  return str.replace(ansiRegex, '');
+}
+
 [configDir, wranglerHome, logsDir].forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -22,12 +29,12 @@ function run(cmd, args, cwd, name, logFile, env = process.env) {
   
   p.stdout.on('data', (data) => {
     process.stdout.write(`[${name}] ${data}`);
-    logStream.write(data);
+    logStream.write(stripAnsi(data.toString()));
   });
   
   p.stderr.on('data', (data) => {
     process.stderr.write(`[${name}] ${data}`);
-    logStream.write(data);
+    logStream.write(stripAnsi(data.toString()));
   });
   
   p.on('error', (err) => {

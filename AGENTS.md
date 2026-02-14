@@ -114,7 +114,7 @@ pnpm --filter @meridian/frontend dev
   - `-API-`: 后端 API/Worker 相关
   - `-ML-`: 机器学习服务相关
   - `-DB-`: 数据库/Schema 相关
-  - `-SYS-`: 系统级/DevOps 相关
+  - `-SYS-`: 系统级/DevOps 相关 (`PRD-SYS-日志功能需求.md`)
 
 ### 需求映射与一致性
 

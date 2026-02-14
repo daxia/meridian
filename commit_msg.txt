@@ -1,0 +1,6 @@
+docs(sys): implement logging requirements and strict doc workflow
+
+- Implement ANSI strip for log files in start_all.js
+- Standardize PRD/DD naming conventions (remove date suffix)
+- Enforce strict template usage in AGENTS.md
+- Create PRD-SYS and DD-SYS for logging module
