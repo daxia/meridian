@@ -6,91 +6,19 @@
 
 ## 项目架构
 
-### 代码组织 (Monorepo)
-
-本项目采用 **Turborepo** 与 **pnpm** 管理的 Monorepo 结构：
-
-```
-meridian/
-├── apps/
-│   ├── backend/         # 后端服务 (Cloudflare Workers, Hono, Durable Objects)
-│   └── frontend/        # 前端应用 (Nuxt 3, Vue 3, TailwindCSS)
-├── packages/
-│   ├── database/        # 共享数据库层 (Drizzle ORM Schema, PostgreSQL 连接)
-│   └── logger/          # 统一日志库 (@meridian/logger)
-├── services/
-│   └── meridian-ml-service/ # 机器学习微服务 (Python, FastAPI, Embeddings)
-├── docs/                # **唯一文档中心**：所有开发文档统一存放于此
-├── .cursor/rules/       # AI 助手规则
-├── start_all.js         # 本地开发环境编排脚本
-├── package.json         # Root 依赖与工作空间配置
-└── turbo.json           # Turbo 任务管道配置
-```
-
-### 各目录职责
-
-| 目录/模块 | 技术栈 | 职责简述 |
-| :--- | :--- | :--- |
-| **apps/backend** | CF Workers, Hono | 核心 API 路由、数据源采集调度 (Durable Objects)、文章处理工作流 (Workflows)。 |
-| **apps/frontend** | Nuxt 3, Vue 3 | 用户界面、RSS 源管理后台、文章展示与搜索交互。 |
-| **services/ml** | Python 3.11, FastAPI | 文本向量化 (Embeddings)、语义分析、AI 模型推理服务。 |
-| **packages/db** | Drizzle ORM | 定义数据库 Schema (PostgreSQL + pgvector)、类型导出、迁移脚本。 |
-| **packages/log** | TypeScript | 提供结构化 JSON 日志能力，适配 Browser/Node/Worker 环境。 |
-
-### 分层结构
-
-- **表现层**: `apps/frontend` (UI/UX)
-- **网关/业务层**: `apps/backend` (API, Auth, Orchestration)
-- **计算服务层**: `services/meridian-ml-service` (AI Compute), `Cloudflare Workflows` (Async Processing)
-- **数据访问层**: `packages/database` (Shared Schema)
-- **基础设施**: `PostgreSQL` (Metadata/Vector), `Cloudflare R2` (Blob Storage)
+项目架构设计、目录结构与职责划分，请参考根目录 **`README.md`** 或 **`docs/03-架构设计/README.md`**。
 
 ---
 
 ## 构建与环境
 
-### 运行与开发
-
-```bash
-# 1. 安装依赖 (Root)
-pnpm install
-
-# 2. 启动所有服务 (推荐)
-# 自动启动 Frontend (3000), Backend (8787), ML Service (8000) 并处理环境变量
-node start_all.js
-
-# 3. 单独开发某个包
-pnpm --filter @meridian/backend dev
-pnpm --filter @meridian/frontend dev
-```
-
-### 环境依赖
-
-- **Node.js**: >= 20.x
-- **pnpm**: >= 9.x
-- **Python**: >= 3.11 (用于 ML Service)
-- **Docker** (可选): 用于本地运行 PostgreSQL 或 ML Service 容器。
+环境依赖安装、启动脚本与开发指南，请参考根目录 **`README.md`** 中的 "Getting Started" 章节。
 
 ---
 
 ## 代码风格规范
 
-### TypeScript / JavaScript
-
-- **规范**: ESLint + Prettier (或 Biome)。
-- **导入**: 优先使用 workspace 协议或别名引用。
-  ```typescript
-  // 推荐
-  import { schema } from '@meridian/database';
-  import { Logger } from '@meridian/logger';
-  ```
-- **类型**: 严禁使用 `any`，必须定义 Interface 或 Zod Schema。
-
-### Python (ML Service)
-
-- **规范**: PEP 8。
-- **工具**: `ruff` (Linter/Formatter), `mypy` (Type Checking)。
-- **依赖**: 使用 `uv` 或 `pip` 管理 `pyproject.toml`。
+具体语言（TypeScript/Python）的代码风格、Linter 配置及工具链说明，请参考 **`docs/05-经验手册/README.md`** 或根目录的贡献指南。
 
 ---
 
@@ -107,28 +35,23 @@ pnpm --filter @meridian/frontend dev
 5.  **执行修改阶段**：按计划修改，完成 Lint 检查与测试。
 6.  **验证阶段**：在本地环境验证全链路功能。
 
-### 文档命名规范（必须遵守）
+### 文档命名与归口规范
 
-- **01-我的需求**：`我的需求.md`，追加原始需求。
-- **02-PRD**：`PRD-[范围]-主题.md`（不带日期）
-- **04-设计文档**：`DD-[范围]-主题.md`（不带日期）
-- **范围标识**:
-  - `-WEB-`: 前端相关
-  - `-API-`: 后端 API/Worker 相关
-  - `-ML-`: 机器学习服务相关
-  - `-DB-`: 数据库/Schema 相关
-  - `-SYS-`: 系统级/DevOps 相关 (`PRD-SYS-日志功能需求.md`)
+请始终参考各子目录下的 **README.md** 以确定命名规范与职责归口：
+
+*   **需求归口**：请查阅 **`docs/02-产品需求文档PRD/README.md`** 确定 PRD 归口。
+*   **设计归口**：请查阅 **`docs/04-设计文档/README.md`** 确定 DD 归口。
+*   **经验沉淀**：请查阅 **`docs/05-经验手册/README.md`** 确定手册命名规范。
+*   **运维操作**：请查阅 **`docs/07-运维手册/README.md`** 确定 SOP 规范。
 
 ### 需求映射与一致性
 
 1.  **一对一映射**：PRD 条目必须对应 `我的需求.md` 中的编号。
 2.  **需求保留原则**（新增）：**严禁删除** `我的需求.md` 中已完成或废弃的需求。所有需求应永久保留以作为项目历史记录。新需求应追加在文档末尾。
 3.  **模块化归口**（PRD 与 DD 均须遵守）：
-    *   **Frontend**: `docs/02-产品需求文档PRD/PRD-WEB-*.md` 及 `docs/04-设计文档/DD-WEB-*.md`
-    *   **Backend**: `docs/02-产品需求文档PRD/PRD-API-*.md` 及 `docs/04-设计文档/DD-API-*.md`
-    *   **Schema/DB**: `docs/02-产品需求文档PRD/PRD-DB-*.md` 及 `docs/04-设计文档/DD-DB-*.md`
-    *   **ML Service**: `docs/02-产品需求文档PRD/PRD-ML-*.md` 及 `docs/04-设计文档/DD-ML-*.md`
-    *   **System/DevOps**: `docs/02-产品需求文档PRD/PRD-SYS-*.md` 及 `docs/04-设计文档/DD-SYS-*.md`
+    *   **动态查找**：请始终参考 **`docs/02-产品需求文档PRD/README.md`** 中的文档职责说明表格，确定当前需求应归入哪个 PRD 文档。
+    *   **严禁碎片化**：仅在 README.md 未覆盖当前需求领域时，才可申请新建 PRD（并需同步更新 README.md）。
+    *   **命名规范**：遵循 README.md 中定义的命名体系（如 `PRD-API-核心服务需求.md`），而非随意命名。
 
 ### 模板规范（严格执行）
 
@@ -170,32 +93,10 @@ PRD 和 DD 必须严格遵循 **`.cursor/rules/docs-agents_v1.md`** 中定义的
 
 ## 错误处理与日志
 
-### 日志规范
-
-- **统一库**: 所有服务必须使用 `@meridian/logger`。
-- **级别**:
-  - `ERROR`: 导致请求失败或系统异常的错误（必须包含 Stack Trace）。
-  - `WARN`: 预期外的状态但不影响核心流程（如 RSS 解析部分失败）。
-  - `INFO`: 关键业务节点（如 "Workflow Started", "Article Saved"）。
-  - `DEBUG`: 详细调试信息（仅开发环境开启）。
-
-### 错误响应
-
-- **API**: 统一返回 JSON 格式错误。
-  ```json
-  {
-    "success": false,
-    "error": {
-      "code": "RESOURCE_NOT_FOUND",
-      "message": "Source with ID 123 not found"
-    }
-  }
-  ```
+详细的日志规范与错误处理策略，请参考 **`docs/05-经验手册/README.md`** 中的相关技术规范或 **`PRD-SYS-日志功能需求.md`**。
 
 ---
 
 ## 提示词编写规范（08-提示词）
 
-将对话中「用户」的提示词沉淀到 **docs/08-提示词**。**仅在用户明确提出记录提示词时执行**。
-- 格式：`提示词-YYYYMMDD.md`
-- 结构：概括 + 原始提示词列表。
+请参考 **`docs/08-提示词/README.md`**。
