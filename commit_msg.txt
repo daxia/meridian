@@ -1,4 +1,4 @@
-docs: 更新运维手册，补充 ML Service 新增依赖
+fix: 解决 TS 类型兼容性错误
 
-- 在系统概览中添加 UMAP 和 HDBSCAN。
-- 在部署指南中补充关于 C++ 编译环境的说明 (针对 hdbscan)。
+- `index.ts`: 显式包装 `app.fetch` 以匹配 `ExportedHandler.fetch` 签名。
+- `generateBrief.workflow.ts`: 捕获 `JSON.parse` 异常时显式将 `error` 类型断言为 `unknown`，符合 TS 4.0+ 的 `useUnknownInCatchVariables` 规则。

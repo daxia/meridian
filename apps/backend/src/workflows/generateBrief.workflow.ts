@@ -140,8 +140,9 @@ export class GenerateBriefWorkflow extends WorkflowEntrypoint<Env, GenerateBrief
         
         try {
             return JSON.parse(text);
-        } catch (e) {
-            logger.error(`Failed to parse JSON for cluster ${label}`, { text });
+        } catch (e: unknown) {
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            logger.error(`Failed to parse JSON for cluster ${label}`, { text, error: errorMessage });
             return {
                 topic_title: "Processing Error",
                 summary: "Could not generate summary.",

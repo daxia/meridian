@@ -37,8 +37,8 @@ export type Env = {
 const queueLogger = new Logger({ service: 'article-queue-handler' });
 
 export default {
-  fetch: app.fetch,
-  async queue(batch: MessageBatch<ProcessArticlesParams>, env: Env): Promise<void> {
+  fetch: (request: Request, env: Env, ctx: ExecutionContext) => app.fetch(request, env, ctx),
+  async queue(batch: MessageBatch<ProcessArticlesParams>, env: Env, ctx: ExecutionContext): Promise<void> {
     const batchLogger = queueLogger.child({ batch_size: batch.messages.length });
     batchLogger.info('收到一批待处理的文章');
 
@@ -91,7 +91,7 @@ export default {
 
     batch.ackAll(); // Acknowledge the entire batch after all chunks are processed
   },
-  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     const logger = new Logger({ service: 'source-monitor' });
 
     // Handle Cron Triggers
