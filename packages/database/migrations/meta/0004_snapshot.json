@@ -1,5 +1,5 @@
 {
-  "id": "21d33300-78da-4e50-8835-5eeb938a2524",
+  "id": "3ba98a75-2135-4119-bff7-916e83da6414",
   "prevId": "c16ac272-75c4-4ad1-86ae-95f38365122a",
   "version": "7",
   "dialect": "postgresql",
@@ -278,6 +278,46 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.newsletter": {
+      "name": "newsletter",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "newsletter_email_unique": {
+          "name": "newsletter_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.publishers": {
       "name": "publishers",
       "schema": "",
@@ -326,9 +366,9 @@
           "primaryKey": true,
           "notNull": true
         },
-        "report_date": {
-          "name": "report_date",
-          "type": "timestamp",
+        "title": {
+          "name": "title",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -338,8 +378,44 @@
           "primaryKey": false,
           "notNull": true
         },
-        "summary": {
-          "name": "summary",
+        "tldr": {
+          "name": "tldr",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_articles": {
+          "name": "total_articles",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_sources": {
+          "name": "total_sources",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "used_articles": {
+          "name": "used_articles",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "used_sources": {
+          "name": "used_sources",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "clustering_params": {
+          "name": "clustering_params",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "model_author": {
+          "name": "model_author",
           "type": "text",
           "primaryKey": false,
           "notNull": false

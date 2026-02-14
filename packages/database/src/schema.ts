@@ -111,8 +111,14 @@ export const $ingested_items = pgTable(
 
 export const $reports = pgTable('reports', {
   id: serial('id').primaryKey(),
-  report_date: timestamp('report_date', { mode: 'date' }).notNull(),
+  title: text('title').notNull(),
   content: text('content').notNull(),
-  summary: text('summary'),
+  tldr: text('tldr'),
+  totalArticles: integer('total_articles'),
+  totalSources: integer('total_sources'),
+  usedArticles: integer('used_articles'),
+  usedSources: integer('used_sources'),
+  clustering_params: jsonb('clustering_params'),
+  model_author: text('model_author'),
   created_at: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });

@@ -52,7 +52,7 @@ importers:
         version: 4.3.19(react@19.0.0)(zod@3.25.76)
       fast-xml-parser:
         specifier: ^5.2.1
-        version: 5.3.5
+        version: 5.3.6
       hono:
         specifier: ^4.7.7
         version: 4.11.9
@@ -83,7 +83,7 @@ importers:
         version: 22.19.11
       typescript:
         specifier: ^5.8.2
-        version: 5.8.2
+        version: 5.9.3
       vitest:
         specifier: ^3.1.2
         version: 3.2.4(@types/node@22.19.11)(jiti@2.6.1)(jsdom@26.0.0)(lightningcss@1.30.2)(sass@1.85.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
@@ -173,27 +173,27 @@ importers:
         specifier: ^0.42.0
         version: 0.42.0(@cloudflare/workers-types@4.20260214.0)(@electric-sql/pglite@0.2.17)(@opentelemetry/api@1.9.0)(bun-types@1.2.4)(gel@2.0.1)(postgres@3.4.8)
       postgres:
-        specifier: ^3.4.5
+        specifier: ^3.4.8
         version: 3.4.8
       tsx:
-        specifier: ^4.19.3
+        specifier: ^4.21.0
         version: 4.21.0
       zod:
-        specifier: ^3.24.3
+        specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
       '@types/node':
-        specifier: ^22.13.14
+        specifier: ^22.19.11
         version: 22.19.11
       dotenv:
-        specifier: ^16.4.7
+        specifier: ^16.6.1
         version: 16.6.1
       drizzle-kit:
-        specifier: ^0.31.0
+        specifier: ^0.31.9
         version: 0.31.9
       typescript:
-        specifier: ^5.8.2
-        version: 5.8.2
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/logger:
     devDependencies:
@@ -4217,8 +4217,8 @@ packages:
   fast-npm-meta@1.2.1:
     resolution: {integrity: sha512-vTHOCEbzcbQEfYL0sPzcz+HF5asxoy60tPBVaiYzsCfuyhbXZCSqXL+LgPGV22nuAYimoGMeDpywMQB4aOw8HQ==}
 
-  fast-xml-parser@5.3.5:
-    resolution: {integrity: sha512-JeaA2Vm9ffQKp9VjvfzObuMCjUYAp5WDYhRYL5LrBPY/jUDlUtOvDfot0vKSkB9tuX885BDHjtw4fZadD95wnA==}
+  fast-xml-parser@5.3.6:
+    resolution: {integrity: sha512-QNI3sAvSvaOiaMl8FYU4trnEzCwiRr8XMWgAHzlrWpTSj+QaCSvOf1h82OEP1s4hiAXhnbXSyFWCf4ldZzZRVA==}
     hasBin: true
 
   fastq@1.19.1:
@@ -4349,6 +4349,9 @@ packages:
 
   get-tsconfig@4.10.0:
     resolution: {integrity: sha512-kGzZ3LWWQcGIAmg6iWvXn0ei6WDtV26wzHRMwDSzmAbcXrTEXxHy6IehI6/4eT6VRKyMP1eF1VqwrVUmE/LR7A==}
+
+  get-tsconfig@4.13.6:
+    resolution: {integrity: sha512-shZT/QMiSHc/YBLxxOkMtgSid5HFoauqCE3/exfsEcwg1WkeqjG+V40yBbBrsD+jW2HDXcs28xOfcbm2jI8Ddw==}
 
   get-uri@6.0.5:
     resolution: {integrity: sha512-b1O07XYq8eRuVzBNgJLstU6FYc1tS6wnMtF1I1D9lE8LxZSOGZ7LhxN54yPP6mGw5f2CkXY2BQUL9Fx41qvcIg==}
@@ -7324,7 +7327,7 @@ snapshots:
   '@esbuild-kit/esm-loader@2.6.5':
     dependencies:
       '@esbuild-kit/core-utils': 3.3.2
-      get-tsconfig: 4.10.0
+      get-tsconfig: 4.13.6
 
   '@esbuild/aix-ppc64@0.25.12':
     optional: true
@@ -10339,7 +10342,7 @@ snapshots:
 
   esbuild-register@3.6.0(esbuild@0.25.12):
     dependencies:
-      debug: 4.4.0
+      debug: 4.4.3
       esbuild: 0.25.12
     transitivePeerDependencies:
       - supports-color
@@ -10729,7 +10732,7 @@ snapshots:
 
   fast-npm-meta@1.2.1: {}
 
-  fast-xml-parser@5.3.5:
+  fast-xml-parser@5.3.6:
     dependencies:
       strnum: 2.1.2
 
@@ -10852,6 +10855,10 @@ snapshots:
   get-stream@8.0.1: {}
 
   get-tsconfig@4.10.0:
+    dependencies:
+      resolve-pkg-maps: 1.0.0
+
+  get-tsconfig@4.13.6:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
@@ -12983,7 +12990,7 @@ snapshots:
   tsx@4.21.0:
     dependencies:
       esbuild: 0.27.3
-      get-tsconfig: 4.10.0
+      get-tsconfig: 4.13.6
     optionalDependencies:
       fsevents: 2.3.3
 
