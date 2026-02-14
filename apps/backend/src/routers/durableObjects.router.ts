@@ -3,7 +3,7 @@ import { $data_sources, $ingested_items, eq, isNull } from '@meridian/database';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { HonoEnv } from '../app';
-import { Logger } from '../lib/logger';
+import { Logger } from '@meridian/logger';
 import { tryCatchAsync } from '../lib/tryCatchAsync';
 import { getDb, hasValidAuthToken } from '../lib/utils';
 
@@ -92,6 +92,62 @@ const route = new Hono<HonoEnv>()
       }
 
       initLogger.info('Successfully initialized source DO', { sourceId, url: source.config.config.url });
+      return c.json({ success: true });
+    }
+  )
+  .post(
+    '/admin/source/:sourceId/trigger',
+    zValidator(
+      'param',
+      z.object({
+        sourceId: z.string().min(1, 'Source ID is required'),
+      })
+    ),
+    async c => {
+      // auth check
+      if (!hasValidAuthToken(c)) {
+        return c.json({ error: 'Unauthorized' }, 401);
+      }
+
+      const triggerLogger = logger.child({ operation: 'trigger-source' });
+      const { sourceId } = c.req.valid('param');
+
+      const db = getDb(c.env.HYPERDRIVE);
+
+      // Get the source first to get the URL for the DO ID
+      const sourceResult = await tryCatchAsync(
+        db.query.$data_sources.findFirst({
+          where: eq($data_sources.id, Number(sourceId)),
+        })
+      );
+
+      if (sourceResult.isErr()) {
+        const error = sourceResult.error instanceof Error ? sourceResult.error : new Error(String(sourceResult.error));
+        triggerLogger.error('Failed to fetch source', { sourceId }, error);
+        return c.json({ error: 'Failed to fetch source' }, 500);
+      }
+
+      const source = sourceResult.value;
+      if (!source) {
+        return c.json({ error: 'Source not found' }, 404);
+      }
+
+      // Get the DO
+      const doId = c.env.DATA_SOURCE_INGESTOR.idFromName(source.config.config.url);
+      const stub = c.env.DATA_SOURCE_INGESTOR.get(doId);
+
+      // Trigger the fetch
+      const triggerResult = await tryCatchAsync(
+        stub.fetch('http://do/trigger', { method: 'POST' })
+      );
+
+      if (triggerResult.isErr()) {
+        const error = triggerResult.error instanceof Error ? triggerResult.error : new Error(String(triggerResult.error));
+        triggerLogger.error('Failed to trigger source DO', { sourceId, url: source.config.config.url }, error);
+        return c.json({ error: 'Failed to trigger source DO' }, 500);
+      }
+
+      triggerLogger.info('Successfully triggered source DO', { sourceId, url: source.config.config.url });
       return c.json({ success: true });
     }
   )

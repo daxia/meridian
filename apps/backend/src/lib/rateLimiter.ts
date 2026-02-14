@@ -1,5 +1,5 @@
 import type { WorkflowStep } from 'cloudflare:workers';
-import { Logger } from './logger';
+import { Logger } from '@meridian/logger';
 
 /**
  * Configuration options for the rate limiter

@@ -9,6 +9,9 @@ from .dependencies import (
 )  # Import auth dependency
 from .embeddings import compute_embeddings
 from .schemas import EmbeddingRequest, EmbeddingResponse
+from .logger import setup_logging
+
+logger = setup_logging()
 
 app = FastAPI(
     title="Meridian ML Service",
@@ -37,7 +40,7 @@ async def api_compute_embeddings(
     """
     Computes embeddings for the provided list of texts.
     """
-    print(f"Received request to embed {len(request.texts)} texts.")
+    logger.info(f"Received request to embed {len(request.texts)} texts.")
     try:
         embeddings_np: np.ndarray = compute_embeddings(
             texts=request.texts,
@@ -50,7 +53,7 @@ async def api_compute_embeddings(
             embeddings=embeddings_list, model_name=settings.embedding_model_name
         )
     except Exception as e:
-        print(f"ERROR during embedding computation: {e}")
+        logger.error(f"ERROR during embedding computation: {e}", exc_info=True)
         # Consider more specific error handling based on exception types
         raise HTTPException(
             status_code=500,

@@ -18,19 +18,21 @@ export default defineEventHandler(async event => {
     await Promise.all([
       getDB(event).insert($newsletter).values({ email: bodyContent.data.email }).onConflictDoNothing(),
       (async () => {
-        if (config.mailerlite.api_key === undefined || config.mailerlite.group_id === undefined) {
-          console.warn('MailerLite is not configured');
-          return; // nothing if mailerlite is not configured
+        if (!config.mailerlite.api_key || !config.mailerlite.group_id) {
+          console.warn('MailerLite is not configured, skipping subscription sync.');
+          return;
         }
-        const mailerlite = new MailerLite({ api_key: config.mailerlite.api_key });
+        
         try {
+          const mailerlite = new MailerLite({ api_key: config.mailerlite.api_key });
           await mailerlite.subscribers.createOrUpdate({
             email: bodyContent.data.email,
             groups: [config.mailerlite.group_id],
           });
         } catch (error) {
-          console.error('MailerLite error:', error);
-          throw createError({ statusCode: 500, statusMessage: 'MailerLite error' });
+          // Log the error but do not fail the request if MailerLite sync fails
+          // This ensures the user still gets a success response for the DB insertion
+          console.error('MailerLite sync failed (non-fatal):', error);
         }
       })(),
     ]);

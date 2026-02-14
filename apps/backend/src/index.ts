@@ -1,6 +1,6 @@
 import app from './app';
 import { DataSourceIngestorDO } from './durable_objects/dataSourceIngestorDO';
-import { Logger } from './lib/logger';
+import { Logger } from '@meridian/logger';
 import { type ProcessArticlesParams, startProcessArticleWorkflow } from './workflows/processIngestedItem.workflow';
 
 export type Env = {

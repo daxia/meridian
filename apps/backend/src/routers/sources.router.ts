@@ -3,7 +3,7 @@ import { $data_sources, eq } from '@meridian/database';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { HonoEnv } from '../app';
-import { Logger } from '../lib/logger';
+import { Logger } from '@meridian/logger';
 import { tryCatchAsync } from '../lib/tryCatchAsync';
 import { getDb, hasValidAuthToken } from '../lib/utils';
 

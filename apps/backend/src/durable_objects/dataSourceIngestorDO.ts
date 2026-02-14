@@ -3,7 +3,7 @@ import { $data_sources, $ingested_items, DataSourceConfigWrapper, eq } from '@me
 import { type Result, ResultAsync, err, ok } from 'neverthrow';
 import { z } from 'zod';
 import type { Env } from '../index';
-import { Logger } from '../lib/logger';
+import { Logger } from '@meridian/logger';
 import { parseRSSFeed } from '../lib/parsers';
 import { tryCatchAsync } from '../lib/tryCatchAsync';
 import { getDb } from '../lib/utils';

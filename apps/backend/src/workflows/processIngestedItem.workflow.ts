@@ -14,7 +14,7 @@ import { ResultAsync } from 'neverthrow';
 import type { Env } from '../index';
 import { getArticleWithBrowser, getArticleWithFetch } from '../lib/articleFetchers';
 import { createEmbeddings } from '../lib/embeddings';
-import { Logger } from '../lib/logger';
+import { Logger } from '@meridian/logger';
 import { DomainRateLimiter } from '../lib/rateLimiter';
 import { getDb } from '../lib/utils';
 import type { z } from 'zod';

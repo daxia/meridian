@@ -92,6 +92,19 @@ async function initDOs() {
   });
 }
 
+async function triggerFetch() {
+  try {
+    await $fetch(`/api/admin/sources/${sourceId}/trigger`, {
+      method: 'POST',
+    });
+    alert('Fetch triggered successfully');
+    refresh();
+  } catch (error) {
+    console.error('Failed to trigger fetch:', error);
+    alert('Failed to trigger fetch');
+  }
+}
+
 // Add delete functionality
 async function deleteSource() {
   if (!confirm('Are you sure you want to delete this source? This action cannot be undone.')) {
@@ -131,6 +144,12 @@ async function deleteSource() {
               @click="initDOs"
             >
               Init DOs
+            </button>
+            <button
+              class="border bg-blue-500 px-4 py-2 rounded hover:cursor-pointer hover:bg-blue-600 text-white"
+              @click="triggerFetch"
+            >
+              Trigger Fetch
             </button>
             <button
               class="border bg-red-500 px-4 py-2 rounded hover:cursor-pointer hover:bg-red-600 text-white"

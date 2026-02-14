@@ -35,6 +35,12 @@
     "strict": true,
 
     /* Skip type checking all .d.ts files. */
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "types": ["node", "@cloudflare/workers-types"],
+    "paths": {
+      "@meridian/logger": ["../../packages/logger/src/index.ts"]
+    }
   }
 }

@@ -5,7 +5,7 @@ description = "Python service for ML tasks (embeddings, clustering) for Meridian
 authors = [{ name = "Iliane Amadou", email = "mail@iliane.xyz" }]
 requires-python = ">=3.11" # Stable, well-supported, performant
 dependencies = [
-    "fastapi>=0.115.12",  # Last version with Pydantic v2 support
+    "fastapi[standard]>=0.115.12",  # Last version with Pydantic v2 support
     "uvicorn[standard]>=0.34.2", # Includes performance extras
     "pydantic>=2.11.3",
     "numpy>=2.2.0",

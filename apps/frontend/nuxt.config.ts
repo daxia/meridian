@@ -1,4 +1,8 @@
 import tailwindcss from '@tailwindcss/vite';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+const currentDir = dirname(fileURLToPath(import.meta.url));
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -53,6 +57,10 @@ export default defineNuxtConfig({
   },
 
   srcDir: 'src',
+
+  alias: {
+    '@meridian/logger': resolve(currentDir, '../../packages/logger/src/index.ts'),
+  },
 
   vite: { plugins: [tailwindcss()] },
 });

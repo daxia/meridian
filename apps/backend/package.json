@@ -29,6 +29,7 @@
     "@cloudflare/puppeteer": "^1.0.2",
     "@hono/zod-validator": "^0.4.3",
     "@meridian/database": "workspace:*",
+    "@meridian/logger": "workspace:*",
     "@mozilla/readability": "^0.6.0",
     "ai": "^4.3.9",
     "fast-xml-parser": "^5.2.1",

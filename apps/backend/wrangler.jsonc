@@ -8,6 +8,9 @@
   "main": "src/index.ts",
   "compatibility_date": "2025-04-30",
   "compatibility_flags": ["nodejs_compat"],
+  "alias": {
+    "@meridian/logger": "../../packages/logger/src/index.ts"
+  },
   "migrations": [
     {
       "new_sqlite_classes": ["DataSourceIngestorDO"],
