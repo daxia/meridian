@@ -97,5 +97,10 @@ curl http://localhost:8787/admin/settings \
 ### 添加新的 LLM 提供商
 
 1. 修改 `apps/backend/src/lib/llm.ts` 中的 `createLLMModel` 函数。
+   - **注意**：该函数不强制指定返回类型，以利用 TypeScript 推断兼容不同版本的 AI SDK 实现（如 `LanguageModelV1` vs `LanguageModelV3`）。
 2. 更新 `apps/backend/src/index.ts` 中的 `Env` 定义。
 3. 更新 `apps/backend/src/lib/settings.ts` 中的类型注释。
+
+### 常见问题
+
+- **类型错误**：如果遇到 `Type 'LanguageModelV3' is missing ...` 错误，请检查 `createLLMModel` 是否显式指定了返回类型。建议移除显式返回类型让 TypeScript 自动推断。

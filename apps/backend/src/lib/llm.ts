@@ -1,6 +1,5 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
-import type { LanguageModel } from 'ai';
 import type { Env } from '../index';
 
 export type LLMProvider = 'google' | 'openai' | 'glm';
@@ -16,7 +15,7 @@ export interface LLMConfig {
  * Creates an AI SDK LanguageModel instance based on configuration.
  * Supports Google (Gemini) and OpenAI compatible providers (including GLM).
  */
-export function createLLMModel(env: Env, config: LLMConfig): LanguageModel {
+export function createLLMModel(env: Env, config: LLMConfig) {
   const provider = config.provider || 'google';
 
   if (provider === 'glm') {
