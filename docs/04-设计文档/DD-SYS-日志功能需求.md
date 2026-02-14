@@ -183,7 +183,7 @@ console.log(`[SourceMonitor] 源 ${source.url} (ID: ${source.id}) 距离下次�
 
 ---
 
-## PRD-需求4：日志归档与历史管理 (待实现)
+## PRD-需求4：日志归档与历史管理 (已完成)
 
 #### 需求编号：20260214008
 

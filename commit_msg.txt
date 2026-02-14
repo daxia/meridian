@@ -1,4 +1,5 @@
-docs(sys): 更新日志功能 PRD 与 DD，新增 Req 8 日志归档需求
+feat(sys): 实现日志启动归档功能 (Req 8)
 
-- 更新 PRD-SYS-日志功能需求.md: 新增需求4 (日志归档)
-- 更新 DD-SYS-日志功能需求.md: 新增需求4 的详细设计 (start_all.js 归档逻辑)
+- 实现 start_all.js 中的 archiveOldLogs 函数。
+- 启动服务前自动将旧日志移至 logs/history/ 目录。
+- 更新相关 PRD/DD 文档状态为已完成。

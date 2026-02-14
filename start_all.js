@@ -21,6 +21,47 @@ function stripAnsi(str) {
   }
 });
 
+function archiveOldLogs() {
+  const historyDir = path.join(logsDir, 'history');
+  
+  // logsDir is guaranteed to exist by the loop above
+
+  try {
+    if (!fs.existsSync(historyDir)) {
+      fs.mkdirSync(historyDir, { recursive: true });
+    }
+
+    const files = fs.readdirSync(logsDir);
+    let count = 0;
+    
+    files.forEach(file => {
+      // Only move .log files, ignore directories (like 'history')
+      if (file.endsWith('.log')) {
+        const oldPath = path.join(logsDir, file);
+        try {
+          // Check if it's a file to be safe
+          if (fs.statSync(oldPath).isFile()) {
+            const newPath = path.join(historyDir, file);
+            fs.renameSync(oldPath, newPath);
+            count++;
+          }
+        } catch (e) {
+          // Ignore errors for individual files (e.g. permission issues)
+        }
+      }
+    });
+    
+    if (count > 0) {
+      console.log(`[系统] 已归档 ${count} 个旧日志文件到 ${historyDir}`);
+    }
+  } catch (err) {
+    console.error('[系统] 归档日志失败:', err);
+  }
+}
+
+// Archive old logs before starting new sessions
+archiveOldLogs();
+
 function run(cmd, args, cwd, name, baseLogName, env = process.env) {
   console.log(`正在启动 ${name}...`);
   
