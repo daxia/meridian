@@ -3,20 +3,13 @@ import { defineEventHandler } from 'h3';
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
-  const token = getCookie(event, 'auth_token');
-
-  if (!token) {
-    throw createError({
-      statusCode: 401,
-      message: 'Unauthorized',
-    });
-  }
+  await requireUserSession(event);
 
   try {
-    const response = await $fetch(`${config.public.backendUrl}/admin/articles/reprocess`, {
+    const response = await $fetch(`${config.public.WORKER_API}/admin/articles/reprocess`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${config.worker.api_token}`,
       },
     });
 

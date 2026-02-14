@@ -169,12 +169,13 @@ async function addSource() {
 const isInitializing = ref(false);
 const isReprocessing = ref(false);
 const isGeneratingBrief = ref(false);
+const briefHoursLookback = ref(24);
 
 async function initializeSchedulers() {
   if (isInitializing.value) return;
   isInitializing.value = true;
   try {
-    await $fetch('/api/admin/schedulers/init', { method: 'POST' });
+    await $fetch('/api/admin/sources/initialize', { method: 'POST' });
     alert('调度器初始化成功');
   } catch (e: any) {
     alert('初始化调度器失败: ' + e.message);
@@ -197,13 +198,18 @@ async function reprocessArticles() {
 }
 
 async function generateBrief() {
-  if (isGeneratingBrief.value) return;
+  if (!confirm('确定要手动触发情报简报生成吗？这可能会消耗大量 AI 配额。')) return;
+
   isGeneratingBrief.value = true;
   try {
-    await $fetch('/api/admin/briefs/trigger', { method: 'POST' });
-    alert('情报简报生成已触发');
+    const res = await $fetch<{ instanceId: string; message: string }>('/api/admin/briefs/trigger', {
+      method: 'POST',
+      body: { hoursLookback: briefHoursLookback.value },
+    });
+    alert('已触发简报生成工作流！\n实例ID: ' + res.instanceId + '\n消息: ' + res.message);
   } catch (e: any) {
-    alert('触发简报生成失败: ' + e.message);
+    console.error(e);
+    alert('触发失败: ' + e.message);
   } finally {
     isGeneratingBrief.value = false;
   }
@@ -237,6 +243,30 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
   if (!lastChecked) return true;
   return new Date().getTime() - new Date(lastChecked).getTime() > 24 * 60 * 60 * 1000;
 };
+
+// System Settings
+const analysisMode = ref('serial');
+const isUpdatingSettings = ref(false);
+
+// Fetch initial settings
+const { data: settingsData } = await useFetch('/api/admin/settings');
+if (settingsData.value?.settings?.article_analysis_mode) {
+  analysisMode.value = settingsData.value.settings.article_analysis_mode;
+}
+
+async function updateAnalysisMode() {
+  isUpdatingSettings.value = true;
+  try {
+    await $fetch('/api/admin/settings', {
+      method: 'POST',
+      body: { article_analysis_mode: analysisMode.value },
+    });
+  } catch (e: any) {
+    alert('保存设置失败: ' + e.message);
+  } finally {
+    isUpdatingSettings.value = false;
+  }
+}
 </script>
 
 <template>
@@ -253,13 +283,23 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
         >
           {{ isReprocessing ? '处理中...' : '重处理文章' }}
         </button>
-        <button
-          class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="isGeneratingBrief"
-          @click="generateBrief"
-        >
-          {{ isGeneratingBrief ? '生成中...' : '生成情报简报' }}
-        </button>
+        <div class="flex items-center gap-2">
+          <input
+            v-model="briefHoursLookback"
+            type="number"
+            class="w-16 border px-2 py-2 rounded text-sm"
+            min="1"
+            placeholder="Hrs"
+            title="Lookback hours"
+          />
+          <button
+            class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="isGeneratingBrief"
+            @click="generateBrief"
+          >
+            {{ isGeneratingBrief ? '生成中...' : '生成情报简报' }}
+          </button>
+        </div>
         <button
           class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="isInitializing"
@@ -270,6 +310,27 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
         <button class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100" @click="addSource">
           添加数据源
         </button>
+      </div>
+    </div>
+
+    <!-- System Settings -->
+    <div class="mb-6 bg-white p-4 rounded border">
+      <h2 class="text-lg font-medium text-gray-900 mb-4">系统设置</h2>
+      <div class="flex items-center gap-4">
+        <label class="text-sm font-medium text-gray-700">文章分析模式:</label>
+        <div class="flex items-center gap-2">
+          <select
+            v-model="analysisMode"
+            @change="updateAnalysisMode"
+            class="border rounded px-3 py-1.5 text-sm"
+            :disabled="isUpdatingSettings"
+          >
+            <option value="serial">串行 (安全，节省配额)</option>
+            <option value="parallel">并行 (快速，高配额消耗)</option>
+          </select>
+          <span v-if="isUpdatingSettings" class="text-xs text-gray-500">保存中...</span>
+        </div>
+        <div class="text-xs text-gray-500 ml-2">注意：并行模式可能导致 Gemini API 报 429 配额错误。</div>
       </div>
     </div>
 

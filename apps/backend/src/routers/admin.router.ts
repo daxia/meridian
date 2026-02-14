@@ -5,25 +5,60 @@ import type { HonoEnv } from '../app';
 import { getDb, hasValidAuthToken } from '../lib/utils';
 import { $ingested_items, desc, eq } from '@meridian/database';
 import { startProcessArticleWorkflow } from '../workflows/processIngestedItem.workflow';
+import { getSetting, setSetting, SETTINGS_KEYS } from '../lib/settings';
 
 const route = new Hono<HonoEnv>()
+  .get('/settings', async c => {
+    if (!hasValidAuthToken(c)) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    const db = getDb(c.env.HYPERDRIVE);
+    const analysisMode = await getSetting(db, SETTINGS_KEYS.ARTICLE_ANALYSIS_MODE, 'serial');
+    
+    return c.json({
+      settings: {
+        [SETTINGS_KEYS.ARTICLE_ANALYSIS_MODE]: analysisMode,
+      }
+    });
+  })
+  .post('/settings', async c => {
+    if (!hasValidAuthToken(c)) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    const body = await c.req.json();
+    const db = getDb(c.env.HYPERDRIVE);
+    
+    if (body[SETTINGS_KEYS.ARTICLE_ANALYSIS_MODE]) {
+      const mode = body[SETTINGS_KEYS.ARTICLE_ANALYSIS_MODE];
+      if (mode !== 'serial' && mode !== 'parallel') {
+        return c.json({ error: 'Invalid mode' }, 400);
+      }
+      await setSetting(db, SETTINGS_KEYS.ARTICLE_ANALYSIS_MODE, mode, 'Article analysis concurrency mode');
+    }
+    
+    return c.json({ success: true });
+  })
   .post('/briefs/trigger', async c => {
     // auth check
     if (!hasValidAuthToken(c)) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
+    const { hoursLookback } = await c.req.json().catch(() => ({ hoursLookback: 24 }));
+
     // Trigger the workflow
     // We pass 'force: true' to indicate this is a manual trigger
     const instance = await c.env.GENERATE_BRIEF_WORKFLOW.create({
       params: {
         force: true,
+        hoursLookback: Number(hoursLookback) || 24,
       },
     });
 
     return c.json({
       success: true,
       instanceId: instance.id,
+      message: 'Brief generation triggered',
     });
   })
   .post('/articles/reprocess', async c => {

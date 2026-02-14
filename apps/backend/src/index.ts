@@ -29,6 +29,9 @@ export type Env = {
   GEMINI_API_KEY: string;
   GEMINI_BASE_URL: string;
 
+  OPENAI_API_KEY: string | undefined;
+  OPENAI_BASE_URL: string | undefined;
+
   MERIDIAN_ML_SERVICE_URL: string;
   MERIDIAN_ML_SERVICE_API_KEY: string;
 };

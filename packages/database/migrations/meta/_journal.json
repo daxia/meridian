@@ -29,6 +29,20 @@
       "when": 1748576379169,
       "tag": "0003_regular_swordsman",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1771052362823,
+      "tag": "0004_hesitant_drax",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771052467642,
+      "tag": "0005_numerous_blizzard",
+      "breakpoints": true
     }
   ]
 }

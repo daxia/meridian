@@ -36,10 +36,23 @@ export const ingestedItemStatusEnum = pgEnum('ingested_item_status', [
 
 export const sourceTypeEnum = pgEnum('source_type', ['RSS']);
 
+export const $system_settings = pgTable('system_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  description: text('description'),
+  updated_at: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
 export const $publishers = pgTable('publishers', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
   base_url: text('base_url'),
+  created_at: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
+export const $newsletter = pgTable('newsletter', {
+  id: serial('id').primaryKey(),
+  email: text('email').notNull().unique(),
   created_at: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });
 
@@ -98,28 +111,8 @@ export const $ingested_items = pgTable(
 
 export const $reports = pgTable('reports', {
   id: serial('id').primaryKey(),
-  title: text('title').notNull(),
+  report_date: timestamp('report_date', { mode: 'date' }).notNull(),
   content: text('content').notNull(),
-
-  totalArticles: integer('total_articles').notNull(),
-  totalSources: integer('total_sources').notNull(),
-
-  usedArticles: integer('used_articles').notNull(),
-  usedSources: integer('used_sources').notNull(),
-
-  tldr: text('tldr'),
-
-  clustering_params: jsonb('clustering_params'),
-
-  model_author: text('model_author'),
-
-  createdAt: timestamp('created_at', { mode: 'date' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-});
-
-export const $newsletter = pgTable('newsletter', {
-  id: serial('id').primaryKey(),
-  email: text('email').notNull().unique(),
-  createdAt: timestamp('created_at', { mode: 'date' }).default(sql`CURRENT_TIMESTAMP`),
+  summary: text('summary'),
+  created_at: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });

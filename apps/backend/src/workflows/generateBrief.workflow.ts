@@ -4,9 +4,10 @@ import { Logger } from '@meridian/logger';
 import { getDb } from '../lib/utils';
 import type { Env } from '../index';
 import { clusterEmbeddings } from '../lib/clustering';
-import { createGoogleGenerativeAI, google } from '@ai-sdk/google';
 import { generateText } from 'ai';
 import { getClusterSummaryPrompt } from '../prompts/clusterSummary.prompt';
+import { createLLMModel, type LLMConfig, type LLMProvider } from '../lib/llm';
+import { getSetting, SETTINGS_KEYS } from '../lib/settings';
 
 const dbStepConfig: WorkflowStepConfig = {
   retries: { limit: 3, delay: '1 second', backoff: 'linear' },
@@ -66,8 +67,9 @@ export class GenerateBriefWorkflow extends WorkflowEntrypoint<Env, GenerateBrief
     });
 
     if (articles.length === 0) {
-      logger.info('No articles found in the last ' + lookbackHours + ' hours.');
-      return;
+      const msg = 'No articles found in the last ' + lookbackHours + ' hours.';
+      logger.info(msg);
+      return { success: false, message: msg };
     }
 
     logger.info(`Fetched ${articles.length} articles for processing.`);
@@ -109,9 +111,12 @@ export class GenerateBriefWorkflow extends WorkflowEntrypoint<Env, GenerateBrief
       .map(Number)
       .sort((a, b) => clusters[b].length - clusters[a].length);
 
-    const googleAI = createGoogleGenerativeAI({
-      apiKey: env.GEMINI_API_KEY,
-      baseURL: env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta',
+    const llmConfig = await step.do('get llm config', dbStepConfig, async (): Promise<LLMConfig> => {
+      const provider = (await getSetting(db, SETTINGS_KEYS.LLM_PROVIDER, 'google')) as LLMProvider;
+      const apiKey = await getSetting(db, SETTINGS_KEYS.LLM_API_KEY, '');
+      const baseURL = await getSetting(db, SETTINGS_KEYS.LLM_BASE_URL, '');
+      const modelName = await getSetting(db, SETTINGS_KEYS.LLM_MODEL, '');
+      return { provider, apiKey, baseURL, modelName };
     });
 
     for (const label of sortedClusterLabels) {
@@ -125,8 +130,9 @@ export class GenerateBriefWorkflow extends WorkflowEntrypoint<Env, GenerateBrief
           }))
         );
 
+        const model = createLLMModel(env, llmConfig);
         const response = await generateText({
-          model: google('gemini-2.0-flash-001'),
+          model: model,
           temperature: 0.2,
           prompt: prompt,
         });
@@ -174,8 +180,8 @@ ${c.articles.map((a: any) => `- [${a.title}](${a.url})`).join('\n')}
 `).join('\n\n---\n\n');
 
     // 5. Save to Database
-    await step.do('save-report', dbStepConfig, async () => {
-      await db.insert($reports).values({
+    const reportId = await step.do('save-report', dbStepConfig, async () => {
+      const result = await db.insert($reports).values({
         title: reportTitle,
         content: reportContent,
         totalArticles: articles.length,
@@ -187,10 +193,14 @@ ${c.articles.map((a: any) => `- [${a.title}](${a.url})`).join('\n')}
             noise_count: noise.length 
         },
         tldr: `Generated ${clusteringResult.n_clusters} topics from ${articles.length} articles.`,
-        model_author: 'gemini-2.0-flash-001',
-      });
+        model_author: llmConfig.modelName || (llmConfig.provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.0-flash-001'),
+      }).returning({ id: $reports.id });
+
+      return result[0]?.id;
     });
 
-    logger.info('Brief generation completed and saved.');
+    const successMsg = `Brief generation completed and saved. Report ID: ${reportId}`;
+    logger.info(successMsg);
+    return { success: true, message: successMsg, reportId };
   }
 }

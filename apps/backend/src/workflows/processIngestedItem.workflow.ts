@@ -19,8 +19,10 @@ import { DomainRateLimiter } from '../lib/rateLimiter';
 import { getDb } from '../lib/utils';
 import type { z } from 'zod';
 import { getArticleRepresentationPrompt } from '../prompts/articleRepresentation.prompt';
-import { createGoogleGenerativeAI, google } from '@ai-sdk/google';
 import { generateText } from 'ai';
+import { createLLMModel, type LLMConfig, type LLMProvider } from '../lib/llm';
+
+import { getSetting, SETTINGS_KEYS } from '../lib/settings';
 
 const dbStepConfig: WorkflowStepConfig = {
   retries: { limit: 3, delay: '1 second', backoff: 'linear' },
@@ -58,10 +60,6 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
   async run(_event: WorkflowEvent<ProcessArticlesParams>, step: WorkflowStep) {
     const env = this.env;
     const db = getDb(env.HYPERDRIVE);
-    const google = createGoogleGenerativeAI({
-      apiKey: env.GEMINI_API_KEY,
-      baseURL: env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta',
-    });
     const logger = workflowLogger.child({
       workflow_id: _event.instanceId,
       initial_article_count: _event.payload.ingested_item_ids.length,
@@ -213,18 +211,35 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
     processingLogger.info('正在处理文章：内容提取与 Embeddings 生成');
 
     // process articles for embeddings
-    const analysisResults = await Promise.allSettled(
-      articlesToProcess.map(async article => {
-        const articleLogger = processingLogger.child({ article_id: article.id });
-        articleLogger.info('正在生成文章表示');
+    const analysisMode = await step.do('get analysis mode', dbStepConfig, async () => {
+      return getSetting(db, SETTINGS_KEYS.ARTICLE_ANALYSIS_MODE, 'serial');
+    });
 
+    const llmConfig = await step.do('get llm config', dbStepConfig, async (): Promise<LLMConfig> => {
+      const provider = (await getSetting(db, SETTINGS_KEYS.LLM_PROVIDER, 'google')) as LLMProvider;
+      const apiKey = await getSetting(db, SETTINGS_KEYS.LLM_API_KEY, '');
+      const baseURL = await getSetting(db, SETTINGS_KEYS.LLM_BASE_URL, '');
+      const modelName = await getSetting(db, SETTINGS_KEYS.LLM_MODEL, '');
+      return { provider, apiKey, baseURL, modelName };
+    });
+
+    processingLogger.info(`Using analysis mode: ${analysisMode}, Provider: ${llmConfig.provider}`);
+
+    const analysisResults: Array<{ id: number; success: boolean; error?: unknown }> = [];
+
+    const processArticle = async (article: (typeof articlesToProcess)[0]) => {
+      const articleLogger = processingLogger.child({ article_id: article.id });
+      articleLogger.info('正在生成文章表示');
+
+      try {
         // Analyze article
         const articleRepresentation = await step.do(
           `analyze article ${article.id}`,
-          { retries: { limit: 3, delay: '2 seconds', backoff: 'exponential' }, timeout: '1 minute' },
+          { retries: { limit: 3, delay: '5 seconds', backoff: 'exponential' }, timeout: '1 minute' },
           async () => {
+            const model = createLLMModel(env, llmConfig);
             const response = await generateText({
-              model: google('gemini-2.0-flash-001'),
+              model: model,
               temperature: 0,
               prompt: getArticleRepresentationPrompt(article.title, article.url, article.contentBodyText),
             });
@@ -260,19 +275,33 @@ export class ProcessIngestedItemWorkflow extends WorkflowEntrypoint<Env, Process
         );
 
         articleLogger.info('文章处理成功');
-
         return { id: article.id, success: true };
-      })
-    );
+      } catch (error) {
+        articleLogger.error('文章处理失败', error instanceof Error ? error : new Error(String(error)));
+        return { id: article.id, success: false, error };
+      }
+    };
 
-    const successfulAnalyses = analysisResults.filter(
-      (result): result is PromiseFulfilledResult<{ id: number; success: true }> =>
-        result.status === 'fulfilled' && result.value.success
-    ).length;
+    if (analysisMode === 'parallel') {
+      const results = await Promise.allSettled(articlesToProcess.map(processArticle));
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          analysisResults.push(result.value);
+        }
+      }
+    } else {
+      for (const article of articlesToProcess) {
+        const result = await processArticle(article);
+        analysisResults.push(result);
 
-    const failedAnalyses = analysisResults.filter(
-      result => result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.success)
-    ).length;
+        // Add a small cooldown between articles to avoid rate limits
+        await step.sleep(`cooldown after ${article.id}`, '2 seconds');
+      }
+    }
+
+    const successfulAnalyses = analysisResults.filter(result => result.success).length;
+
+    const failedAnalyses = analysisResults.filter(result => !result.success).length;
 
     logger.info('工作流完成', {
       total_articles: articlesToProcess.length,
