@@ -176,13 +176,13 @@ const route = new Hono<HonoEnv>()
           scrape_frequency_tier: $data_sources.scrape_frequency_minutes,
         })
         .from($data_sources)
-        .where(isNull($data_sources.do_initialized_at))
     );
     if (allSourcesResult.isErr()) {
       const error =
         allSourcesResult.error instanceof Error ? allSourcesResult.error : new Error(String(allSourcesResult.error));
-      initLogger.error('Failed to fetch sources from database', undefined, error);
-      return c.json({ error: 'Failed to fetch sources from database' }, 500);
+      console.error('Failed to fetch sources from database:', error);
+      initLogger.error('Failed to fetch sources from database', { errorMessage: error.message, stack: error.stack });
+      return c.json({ error: 'Failed to fetch sources from database', details: error.message }, 500);
     }
 
     const allSources = allSourcesResult.value;

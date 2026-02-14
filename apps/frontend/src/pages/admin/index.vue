@@ -166,6 +166,26 @@ async function addSource() {
   }
 }
 
+const isInitializing = ref(false);
+
+async function initializeSchedulers() {
+  if (!confirm('This will force re-initialization of all data source schedulers. Continue?')) return;
+  
+  if (isInitializing.value) return;
+  isInitializing.value = true;
+  try {
+    const result = await $fetch('/api/admin/sources/initialize', {
+      method: 'POST',
+    });
+    alert(`Successfully initialized ${result.initialized} out of ${result.total} sources.`);
+  } catch (error) {
+    console.error('Failed to initialize schedulers', error);
+    alert('Failed to initialize schedulers');
+  } finally {
+    isInitializing.value = false;
+  }
+}
+
 // Add health status computation
 const getSourceHealth = (source: Source) => {
   const isStale = source.lastChecked
@@ -202,9 +222,18 @@ const isSourceStale = (lastChecked: string | null | undefined) => {
       <h1 class="text-xl font-medium text-gray-900">Source Analytics</h1>
 
       <!-- button to add a new source -->
-      <button class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100" @click="addSource">
-        Add Source
-      </button>
+      <div class="flex gap-2">
+        <button
+          class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="isInitializing"
+          @click="initializeSchedulers"
+        >
+          {{ isInitializing ? 'Initializing...' : 'Initialize Schedulers' }}
+        </button>
+        <button class="border px-4 py-2 rounded hover:cursor-pointer hover:bg-gray-100" @click="addSource">
+          Add Source
+        </button>
+      </div>
     </div>
 
     <!-- Overview Section -->

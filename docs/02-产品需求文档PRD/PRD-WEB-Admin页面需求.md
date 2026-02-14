@@ -4,30 +4,36 @@ doc_id: PRD-WEB-Admin页面需求
 owner: frontend
 related_requirement:
   - 20260214001
+  - 20260214005
+  - 20260214006
 created: 2026-02-14
 updated: 2026-02-14
 ---
-# 产品需求文档（PRD）：Admin Panel 数据显示修复
+# 产品需求文档（PRD）：Admin Panel 数据显示修复与增强
 
-**需求来源**：docs/01-我的需求/我的需求.md — 第 1 条「Admin Panel 数据显示修复 (2026-02-14)」
+**需求来源**：docs/01-我的需求/我的需求.md
 
-本文文档针对的功能模块：Frontend (Admin Panel)
+本文档针对的功能模块：Frontend (Admin Panel) & Backend (API)
 
 ---
 
 ## 1. 引言
 
 ### 1.1 背景
-Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。当前 "Source Analytics" 列表存在数据格式化错误（NaN, N/A）和源信息缺失（Unknown），严重影响了可读性和运维监控能力。
+Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。近期发现存在数据显示异常（NaN/N/A）、关键运维字段缺失（Last/Next Fetch）以及调度器未初始化导致抓取停滞的问题。
 
 ### 1.2 目标
-修复 Admin Panel 中 "Source Analytics" 列表的数据显示问题，确保日期、百分比和源名称能正确渲染，提升运维体验。
+修复显示错误，增强调度可观测性，并提供手动修复调度状态的工具，确保系统稳定运行。
 
 ---
 
 ## 2. 变更记录
 
 - **2026-02-14**:
+    - **需求编号**: 20260214006
+    - **内容**: 新增 "初始化调度器" 按钮。
+    - **目标**: 解决因 DO 未激活导致的抓取停滞问题。
+  - **2026-02-14**:
     - **需求编号**: 20260214005
     - **内容**: 新增 "Last Fetch" 和 "Next Fetch" 列。
     - **目标**: 增强源抓取调度的可观测性。
@@ -38,7 +44,7 @@ Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。当前 "Sour
 
 ---
 
-## 需求1：Admin Panel 数据显示修复 (进行中)
+## 需求1：Admin Panel 数据显示修复 (已完成)
 
 **需求编号**: 20260214001
 
@@ -82,7 +88,7 @@ Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。当前 "Sour
 
 ---
 
-## 需求2：Admin Panel 抓取时间列增强 (进行中)
+## 需求2：Admin Panel 抓取时间列增强 (已完成)
 
 **需求编号**: 20260214005
 
@@ -118,3 +124,43 @@ Admin Panel 是管理员监控 RSS 源抓取状态的核心界面。当前 "Sour
 1.  Admin Panel 表格中包含 "Last Fetch" 和 "Next Fetch" 列。
 2.  "Next Fetch" 显示的时间应晚于当前时间（除非已过期未执行）。
 3.  时间格式清晰易读。
+
+---
+
+## 需求3：Admin Panel 数据源调度初始化 (待实现)
+
+**需求编号**: 20260214006
+
+**DD编号**: DD-WEB-Admin页面需求
+
+### 1. 需求功能点
+
+**1）初始化调度器按钮**:
+
+- **描述**: 在 Admin 面板提供一个手动触发所有数据源调度器初始化的入口。
+- **UI/UX 交互**:
+    - 在 Source Analytics 表格上方（如 Action Bar）新增一个 Primary Button，文案为 "Initialize Schedulers"。
+    - 点击按钮后，显示 Loading 状态。
+    - 操作成功后显示 Toast 提示 "Schedulers initialized successfully"。
+    - 操作失败显示错误提示。
+- **详细规则**:
+    - 点击按钮调用后端 `/api/admin/sources/initialize` 接口。
+    - 该接口会遍历所有活跃数据源，并对其对应的 Durable Object 发送 `initialize` 信号（或确保 Alarm 被设置）。
+
+**2）后端初始化接口**:
+
+- **描述**: 提供 API 用于批量唤醒数据源的 Durable Objects。
+- **详细规则**:
+    - 路径: `POST /api/admin/sources/initialize` (前端代理) -> `POST /admin/initialize-dos` (后端)。
+    - 逻辑:
+        1. 查询所有 `active` 状态的 Source。
+        2. 为每个 Source 获取其 `DataSourceIngestorDO` Stub。
+        3. 调用 DO 的 `initialize` 方法（需确保 DO 有此方法且能重置 Alarm）。
+        4. 返回成功初始化的数量。
+
+### 2. 验收标准
+
+1.  Admin 页面可见 "Initialize Schedulers" 按钮。
+2.  点击按钮后，网络请求成功 (200 OK)。
+3.  后端日志显示 "Initializing DO for source: [ID]"。
+4.  操作完成后，之前 "Next Fetch" 过期但不执行的源，应在短时间内（如 1 分钟内）开始执行抓取。

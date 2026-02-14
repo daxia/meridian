@@ -122,7 +122,8 @@ pnpm --filter @meridian/frontend dev
 ### 需求映射与一致性
 
 1.  **一对一映射**：PRD 条目必须对应 `我的需求.md` 中的编号。
-2.  **模块化归口**（PRD 与 DD 均须遵守）：
+2.  **需求保留原则**（新增）：**严禁删除** `我的需求.md` 中已完成或废弃的需求。所有需求应永久保留以作为项目历史记录。新需求应追加在文档末尾。
+3.  **模块化归口**（PRD 与 DD 均须遵守）：
     *   **Frontend**: `docs/02-产品需求文档PRD/PRD-WEB-*.md` 及 `docs/04-设计文档/DD-WEB-*.md`
     *   **Backend**: `docs/02-产品需求文档PRD/PRD-API-*.md` 及 `docs/04-设计文档/DD-API-*.md`
     *   **Schema/DB**: `docs/02-产品需求文档PRD/PRD-DB-*.md` 及 `docs/04-设计文档/DD-DB-*.md`

@@ -15,7 +15,9 @@ updated: 2026-02-14
 
 ## 2. 变更记录
 
-- **2026-02-14**: [20260214001] 完成设计与实现。
+- **2026-02-14**: [20260214006] 新增调度器初始化功能设计。
+- **2026-02-14**: [20260214005] 新增抓取时间列设计。
+- **2026-02-14**: [20260214001] 完成数据修复设计与实现。
 
 ---
 
@@ -224,3 +226,104 @@ sequenceDiagram
 1.  **时间准确性**: 验证 `Next Fetch` = `Last Fetch` + `Frequency`。
 2.  **UI 适配**: 确认新增列后表格不换行错乱。
 3.  **排序**: 点击 "Next Fetch" 表头，列表应按时间排序。
+
+---
+
+## PRD-需求3：Admin Panel 数据源调度初始化 (待实现)
+
+### 概述
+
+为了解决部分 RSS 源因 Durable Object (DO) 未初始化而导致调度任务（Alarm）失效的问题，需在 Admin Panel 提供一个手动触发初始化的机制。本设计包含前端操作入口与后端批量唤醒逻辑。
+
+### 目标与约束
+
+- **目标**: 确保所有活跃状态的 RSS 源都有正在运行的调度任务（Alarm）。
+- **约束**:
+    - 操作需具备幂等性（多次点击不应产生副作用，如重复 Alarm）。
+    - 操作耗时可能较长，需有 Loading 反馈。
+    - 仅管理员可执行。
+
+### 功能设计
+
+#### 1. 后端 API 设计 (Backend)
+
+- **API**: `POST /admin/initialize-dos` (Backend Hono)
+- **API (Nuxt Proxy)**: `POST /api/admin/sources/initialize` (Frontend Server)
+- **逻辑**:
+    1.  查询数据库中所有 `active` 的 Source。
+    2.  遍历每个 Source：
+        - 获取对应的 `DataSourceIngestorDO` Stub (ID derived from Source ID)。
+        - 调用 `stub.initialize(source)` 方法。
+    3.  **DO 内部逻辑**:
+        - `initialize` 方法接收 Source 配置。
+        - 检查当前 Alarm 是否存在。
+        - 若不存在或需要更新，调用 `storage.setAlarm(Date.now() + frequency)`.
+        - 返回 "Initialized" 或 "Updated"。
+    4.  统计成功初始化的数量并返回。
+
+#### 2. 前端交互设计 (Frontend)
+
+- **位置**: `apps/frontend/src/pages/admin/index.vue` -> Source Analytics 表格上方工具栏。
+- **组件**: `<UButton label="Initialize Schedulers" :loading="initializing" @click="initializeSchedulers" />`
+- **反馈**:
+    - **Success**: `useToast().add({ title: 'Success', description: 'Initialized ${count} schedulers' })`
+    - **Error**: `useToast().add({ title: 'Error', color: 'red' })`
+
+### 详细设计
+
+#### 类图/数据流
+
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant Frontend
+    participant BackendAPI
+    participant DB
+    participant DO as DataSourceIngestorDO
+
+    Admin->>Frontend: Click "Initialize Schedulers"
+    Frontend->>BackendAPI: POST /api/admin/sources/initialize
+    BackendAPI->>DB: Select * from sources where active=true
+    DB-->>BackendAPI: List[Source]
+    
+    loop For each Source
+        BackendAPI->>DO: stub.initialize(sourceData)
+        DO->>DO: storage.setAlarm(now + freq)
+        DO-->>BackendAPI: OK
+    end
+
+    BackendAPI-->>Frontend: { success: true, count: N }
+    Frontend->>Admin: Show Success Toast
+```
+
+### 接口与数据结构
+
+- **Request**: Empty Body
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "count": 15,
+    "message": "Initialized 15 schedulers"
+  }
+  ```
+
+### 异常与边界
+
+- **DO 不存在**: `get(id)` 会自动创建 DO 实例，符合预期。
+- **超时**: 若 Source 数量过多（>50），Worker 可能超时。
+    - *对策*: 暂时接受，因目前源数量较少。未来可改为 Cloudflare Workflow 异步处理。
+- **并发点击**: 前端 Loading 状态防止重复提交。
+
+### 变更清单
+
+1.  `apps/backend/src/durable_objects/dataSourceIngestorDO.ts`: 确保 `initialize` 方法存在且逻辑正确（设置 Alarm）。
+2.  `apps/backend/src/routers/admin.router.ts`: 新增 `/initialize-dos` 路由。
+3.  `apps/frontend/src/server/api/admin/sources/initialize.post.ts`: 新增 Nuxt Server API 代理。
+4.  `apps/frontend/src/pages/admin/index.vue`: 新增按钮与调用逻辑。
+
+### 测试与验证要点
+
+1.  **日志验证**: 点击按钮后，观察后端日志是否出现 `[DataSourceIngestorDO] Initializing...`。
+2.  **Alarm 验证**: 使用 `wrangler` 或日志确认 Alarm 已设置。
+3.  **功能验证**: 确认 "Next Fetch" 过期的源在初始化后 1-2 分钟内开始抓取（Last Fetch 更新）。
